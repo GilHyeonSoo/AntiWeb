@@ -1,24 +1,16 @@
 import { useState } from 'react';
 import './TextEditor.css';
 
-function TextEditor({ extractedText, onBack, onGenerate }) {
+function TextEditor({ extractedText, onBack, onNext }) {
     const [text, setText] = useState(extractedText);
-    const [isGenerating, setIsGenerating] = useState(false);
 
     const handleTextChange = (e) => {
         setText(e.target.value);
     };
 
-    const handleGenerate = async () => {
+    const handleNext = () => {
         if (!text.trim()) return;
-
-        setIsGenerating(true);
-
-        // Simulate API call delay (will be replaced with actual LLM API)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        onGenerate(text);
-        setIsGenerating(false);
+        onNext(text);
     };
 
     const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -63,7 +55,6 @@ function TextEditor({ extractedText, onBack, onGenerate }) {
                         value={text}
                         onChange={handleTextChange}
                         placeholder="텍스트가 여기에 표시됩니다..."
-                        disabled={isGenerating}
                     />
                     <div className="textarea-gradient" />
                 </div>
@@ -83,25 +74,16 @@ function TextEditor({ extractedText, onBack, onGenerate }) {
             <div className="editor-actions">
                 <button
                     className="btn btn-primary btn-lg generate-btn"
-                    onClick={handleGenerate}
-                    disabled={!text.trim() || isGenerating}
+                    onClick={handleNext}
+                    disabled={!text.trim()}
                 >
-                    {isGenerating ? (
-                        <>
-                            <span className="spinner" />
-                            문제 생성 중...
-                        </>
-                    ) : (
-                        <>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" />
-                            </svg>
-                            문제 생성하기
-                        </>
-                    )}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="9,18 15,12 9,6" />
+                    </svg>
+                    다음
                 </button>
                 <p className="action-hint">
-                    GPT가 텍스트를 분석하여 시험 문제를 생성합니다
+                    다음 단계에서 문제 유형을 선택합니다
                 </p>
             </div>
         </div>

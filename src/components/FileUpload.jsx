@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import './FileUpload.css';
 
-function FileUpload({ onFileSelect }) {
+function FileUpload({ onFileSelect, onBack }) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState('');
@@ -16,7 +16,7 @@ function FileUpload({ onFileSelect }) {
 
   const validateFile = (file) => {
     const extension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
-    
+
     if (!allowedExtensions.includes(extension) && !allowedTypes.includes(file.type)) {
       setError('PDF 또는 DOCX 파일만 업로드할 수 있습니다.');
       return false;
@@ -32,7 +32,7 @@ function FileUpload({ onFileSelect }) {
 
   const handleFile = (file) => {
     setError('');
-    
+
     if (validateFile(file)) {
       setSelectedFile(file);
       onFileSelect(file);
@@ -52,7 +52,7 @@ function FileUpload({ onFileSelect }) {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files[0];
     if (file) {
       handleFile(file);
@@ -110,6 +110,14 @@ function FileUpload({ onFileSelect }) {
 
   return (
     <div className="file-upload-container animate-fade-in">
+      {onBack && (
+        <button className="btn btn-secondary back-btn" onClick={onBack}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="15,18 9,12 15,6" />
+          </svg>
+          뒤로
+        </button>
+      )}
       <div className="upload-header">
         <div className="upload-icon-wrapper">
           <svg className="upload-main-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -146,8 +154,8 @@ function FileUpload({ onFileSelect }) {
               <span className="file-name">{selectedFile.name}</span>
               <span className="file-size">{formatFileSize(selectedFile.size)}</span>
             </div>
-            <button 
-              className="remove-file-btn" 
+            <button
+              className="remove-file-btn"
               onClick={handleRemoveFile}
               aria-label="파일 제거"
             >

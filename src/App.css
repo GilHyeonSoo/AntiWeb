@@ -16,10 +16,20 @@
   padding: var(--spacing-md) 0;
 }
 
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .logo {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
 .logo-icon {
@@ -47,6 +57,17 @@
   background-clip: text;
 }
 
+.home-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.home-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 /* Main Content */
 .app-main {
   flex: 1;
@@ -59,14 +80,80 @@
 
 /* Progress Steps Enhancement */
 .progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--color-surface);
   padding: var(--spacing-lg) var(--spacing-xl);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.progress-step-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.progress-step.active {
+  color: var(--color-accent);
+}
+
+.progress-step.completed {
+  color: var(--color-success);
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-normal);
+}
+
+.progress-step.active .step-number {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
+.progress-step.completed .step-number {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: white;
 }
 
 .step-label {
-  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.step-connector {
+  width: 2rem;
+  height: 2px;
+  background: var(--color-border);
+  margin: 0 var(--spacing-sm);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-normal);
+}
+
+.step-connector.active {
+  background: var(--color-success);
 }
 
 /* Footer */
@@ -96,6 +183,10 @@
     display: none;
   }
 
+  .step-connector {
+    width: 1.5rem;
+  }
+
   .content-area {
     margin-top: var(--spacing-lg);
   }
@@ -103,6 +194,7 @@
 
 /* Print Styles */
 @media print {
+
   .app-header,
   .app-footer,
   .progress-steps {
