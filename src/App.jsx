@@ -5,7 +5,8 @@ import YoutubeInput from './components/YoutubeInput';
 import TextEditor from './components/TextEditor';
 import QuestionTypeSelector from './components/QuestionTypeSelector';
 import QuestionDisplay from './components/QuestionDisplay';
-import SubjectSelector from './components/SubjectSelector';
+import LoginPage from './components/LoginPage';
+import SignupPage from './components/SignupPage';
 import './App.css';
 
 // Mock data for demonstration
@@ -87,7 +88,7 @@ const generateMockQuestions = (type) => {
 
 function App() {
   // Navigation state
-  const [currentPage, setCurrentPage] = useState('home'); // home, pdf, youtube, suneung
+  const [currentPage, setCurrentPage] = useState('home'); // home, pdf, youtube
   const [currentStep, setCurrentStep] = useState(1);
 
   // Data state
@@ -96,7 +97,7 @@ function App() {
   const [editedText, setEditedText] = useState('');
   const [selectedQuestionType, setSelectedQuestionType] = useState('');
   const [questions, setQuestions] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState('');
+
 
   // Mode selection from home page
   const handleSelectMode = (mode) => {
@@ -164,17 +165,7 @@ function App() {
     setCurrentStep(4);
   };
 
-  // Suneung Flow handlers
-  const handleSelectSubject = async (subject) => {
-    setSelectedSubject(subject);
 
-    // Simulate loading questions
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Mock suneung questions
-    setQuestions(generateMockQuestions('multiple'));
-    setCurrentStep(2);
-  };
 
   // Get progress steps based on current page
   const getProgressSteps = () => {
@@ -192,12 +183,6 @@ function App() {
         { label: '텍스트 편집', step: 2 },
         { label: '유형 선택', step: 3 },
         { label: '문제 확인', step: 4 }
-      ];
-    }
-    if (currentPage === 'suneung') {
-      return [
-        { label: '과목 선택', step: 1 },
-        { label: '문제 풀기', step: 2 }
       ];
     }
     return [];
@@ -273,19 +258,24 @@ function App() {
       }
     }
 
-    // Suneung Flow
-    if (currentPage === 'suneung') {
-      if (currentStep === 1) {
-        return <SubjectSelector onSelect={handleSelectSubject} onBack={handleGoHome} />;
-      }
-      if (currentStep === 2) {
-        return (
-          <QuestionDisplay
-            questions={questions}
-            onReset={handleGoHome}
-          />
-        );
-      }
+    // Login Page
+    if (currentPage === 'login') {
+      return (
+        <LoginPage
+          onBack={handleGoHome}
+          onSwitchToSignup={() => setCurrentPage('signup')}
+        />
+      );
+    }
+
+    // Signup Page
+    if (currentPage === 'signup') {
+      return (
+        <SignupPage
+          onBack={handleGoHome}
+          onSwitchToLogin={() => setCurrentPage('login')}
+        />
+      );
     }
 
     return null;
@@ -294,71 +284,91 @@ function App() {
   const progressSteps = getProgressSteps();
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="container">
-          <div className="header-content">
-            <button className="logo" onClick={handleGoHome}>
-              <div className="logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                  <line x1="8" y1="7" x2="16" y2="7" />
-                  <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
-              </div>
-              <span className="logo-text">ExamGen</span>
-            </button>
-            {currentPage !== 'home' && (
-              <button className="home-btn btn btn-secondary" onClick={handleGoHome}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9,22 9,12 15,12 15,22" />
-                </svg>
-                홈
-              </button>
-            )}
-          </div>
+    <div className="app-layout">
+      {/* Left Sidebar Ad */}
+      <aside className="sidebar-ad sidebar-ad-left">
+        <div className="sidebar-ad-content">
+          <span className="sidebar-ad-label">광고</span>
         </div>
-      </header>
+      </aside>
 
-      <main className="app-main">
-        <div className="container">
-          {/* Progress Steps - only show when not on home */}
-          {currentPage !== 'home' && progressSteps.length > 0 && (
-            <div className="progress-steps">
-              {progressSteps.map((item, index) => (
-                <div key={item.step} className="progress-step-wrapper">
-                  <div className={`progress-step ${currentStep >= item.step ? 'active' : ''} ${currentStep > item.step ? 'completed' : ''}`}>
-                    <span className="step-number">
-                      {currentStep > item.step ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" width="14" height="14">
-                          <polyline points="20,6 9,17 4,12" />
-                        </svg>
-                      ) : item.step}
-                    </span>
-                    <span className="step-label">{item.label}</span>
-                  </div>
-                  {index < progressSteps.length - 1 && (
-                    <div className={`step-connector ${currentStep > item.step ? 'active' : ''}`} />
-                  )}
+      <div className="app">
+        <header className="app-header">
+          <div className="container">
+            <div className="header-content">
+              <button className="logo" onClick={handleGoHome}>
+                <div className="logo-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    <line x1="8" y1="7" x2="16" y2="7" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
                 </div>
-              ))}
+                <span className="logo-text">ExamGen</span>
+              </button>
+              <div className="header-actions">
+                {currentPage !== 'home' && (
+                  <button className="home-btn btn btn-secondary" onClick={handleGoHome}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <polyline points="9,22 9,12 15,12 15,22" />
+                    </svg>
+                    홈
+                  </button>
+                )}
+                <button className="btn btn-secondary" onClick={() => setCurrentPage('login')}>로그인</button>
+                <button className="btn btn-primary" onClick={() => setCurrentPage('signup')}>회원가입</button>
+              </div>
             </div>
-          )}
-
-          {/* Content */}
-          <div className="content-area">
-            {renderContent()}
           </div>
-        </div>
-      </main>
+        </header>
 
-      <footer className="app-footer">
-        <div className="container">
-          <p>© 2024 ExamGen. AI 기반 시험 문제 생성 서비스</p>
+        <main className="app-main">
+          <div className="container">
+            {/* Progress Steps - only show when not on home */}
+            {currentPage !== 'home' && progressSteps.length > 0 && (
+              <div className="progress-steps">
+                {progressSteps.map((item, index) => (
+                  <div key={item.step} className="progress-step-wrapper">
+                    <div className={`progress-step ${currentStep >= item.step ? 'active' : ''} ${currentStep > item.step ? 'completed' : ''}`}>
+                      <span className="step-number">
+                        {currentStep > item.step ? (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" width="14" height="14">
+                            <polyline points="20,6 9,17 4,12" />
+                          </svg>
+                        ) : item.step}
+                      </span>
+                      <span className="step-label">{item.label}</span>
+                    </div>
+                    {index < progressSteps.length - 1 && (
+                      <div className={`step-connector ${currentStep > item.step ? 'active' : ''}`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="content-area">
+              {renderContent()}
+            </div>
+          </div>
+        </main>
+
+        <footer className="app-footer">
+          <div className="container">
+            <p>© 2024 ExamGen. AI 기반 시험 문제 생성 서비스</p>
+          </div>
+        </footer>
+      </div>
+
+      {/* Right Sidebar Ad */}
+      <aside className="sidebar-ad sidebar-ad-right">
+        <div className="sidebar-ad-content">
+          <span className="sidebar-ad-label">광고</span>
         </div>
-      </footer>
+      </aside>
     </div>
   );
 }

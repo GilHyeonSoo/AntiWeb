@@ -3,6 +3,7 @@ import './TextEditor.css';
 
 function TextEditor({ extractedText, onBack, onNext }) {
     const [text, setText] = useState(extractedText);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const handleTextChange = (e) => {
         setText(e.target.value);
@@ -31,7 +32,7 @@ function TextEditor({ extractedText, onBack, onNext }) {
                 </div>
             </div>
 
-            <div className="editor-content">
+            <div className={`editor-content ${isExpanded ? 'expanded' : 'collapsed'}`}>
                 <div className="editor-toolbar">
                     <div className="toolbar-info">
                         <span className="badge badge-primary">
@@ -42,33 +43,52 @@ function TextEditor({ extractedText, onBack, onNext }) {
                             추출된 텍스트
                         </span>
                     </div>
-                    <div className="text-stats">
-                        <span>{charCount.toLocaleString()} 글자</span>
-                        <span className="stats-divider">|</span>
-                        <span>{wordCount.toLocaleString()} 단어</span>
+                    <div className="toolbar-actions">
+                        <div className="text-stats">
+                            <span>{charCount.toLocaleString()} 글자</span>
+                            <span className="stats-divider">|</span>
+                            <span>{wordCount.toLocaleString()} 단어</span>
+                        </div>
+                        <button
+                            className="btn btn-secondary expand-btn"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                {isExpanded ? (
+                                    <polyline points="18,15 12,9 6,15" />
+                                ) : (
+                                    <polyline points="6,9 12,15 18,9" />
+                                )}
+                            </svg>
+                            {isExpanded ? '접기' : '펼치기'}
+                        </button>
                     </div>
                 </div>
 
-                <div className="textarea-wrapper">
-                    <textarea
-                        className="input text-area"
-                        value={text}
-                        onChange={handleTextChange}
-                        placeholder="텍스트가 여기에 표시됩니다..."
-                    />
-                    <div className="textarea-gradient" />
-                </div>
+                {isExpanded && (
+                    <>
+                        <div className="textarea-wrapper">
+                            <textarea
+                                className="input text-area"
+                                value={text}
+                                onChange={handleTextChange}
+                                placeholder="텍스트가 여기에 표시됩니다..."
+                            />
+                            <div className="textarea-gradient" />
+                        </div>
 
-                <div className="editor-tips">
-                    <div className="tip-item">
-                        <span className="tip-icon">✏️</span>
-                        <span>불필요한 내용을 삭제하면 더 관련성 높은 문제가 생성됩니다</span>
-                    </div>
-                    <div className="tip-item">
-                        <span className="tip-icon">📝</span>
-                        <span>핵심 개념을 강조하거나 추가 설명을 넣을 수 있습니다</span>
-                    </div>
-                </div>
+                        <div className="editor-tips">
+                            <div className="tip-item">
+                                <span className="tip-icon">✏️</span>
+                                <span>불필요한 내용을 삭제하면 더 관련성 높은 문제가 생성됩니다</span>
+                            </div>
+                            <div className="tip-item">
+                                <span className="tip-icon">📝</span>
+                                <span>핵심 개념을 강조하거나 추가 설명을 넣을 수 있습니다</span>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="editor-actions">
@@ -91,3 +111,4 @@ function TextEditor({ extractedText, onBack, onNext }) {
 }
 
 export default TextEditor;
+

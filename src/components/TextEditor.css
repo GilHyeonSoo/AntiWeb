@@ -5,9 +5,11 @@
 
 .editor-header {
     display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-lg);
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
     margin-bottom: var(--spacing-xl);
+    text-align: center;
 }
 
 .back-btn {
@@ -22,11 +24,13 @@
 .editor-title h2 {
     font-size: var(--font-size-2xl);
     margin-bottom: var(--spacing-xs);
+    white-space: nowrap;
 }
 
 .editor-title p {
     font-size: var(--font-size-base);
     color: var(--color-text-secondary);
+    white-space: nowrap;
 }
 
 .editor-content {
@@ -35,6 +39,9 @@
     border-radius: var(--radius-xl);
     overflow: hidden;
     box-shadow: var(--shadow-md);
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
 }
 
 .editor-toolbar {
@@ -44,6 +51,34 @@
     padding: var(--spacing-md) var(--spacing-lg);
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.editor-content.collapsed {
+    min-height: auto;
+}
+
+.editor-content.collapsed .editor-toolbar {
+    border-bottom: none;
+}
+
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.expand-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-sm);
+}
+
+.expand-btn svg {
+    width: 1rem;
+    height: 1rem;
 }
 
 .toolbar-info {
@@ -72,22 +107,29 @@
 
 .textarea-wrapper {
     position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .text-area {
     width: 100%;
     min-height: 400px;
-    padding: var(--spacing-lg);
+    flex: 1;
+    padding: var(--spacing-xl);
     border: none;
     border-radius: 0;
     resize: vertical;
-    font-size: var(--font-size-base);
-    line-height: var(--line-height-relaxed);
+    font-size: var(--font-size-lg);
+    line-height: 1.8;
+    font-family: var(--font-family);
+    background: var(--color-background);
 }
 
 .text-area:focus {
     outline: none;
     box-shadow: none;
+    background: #fafbff;
 }
 
 .textarea-gradient {
