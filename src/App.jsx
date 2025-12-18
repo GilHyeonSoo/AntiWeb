@@ -305,7 +305,7 @@ function App() {
                     <line x1="8" y1="11" x2="14" y2="11" />
                   </svg>
                 </div>
-                <span className="logo-text">ExamGen</span>
+                <span className="logo-text">GenGen</span>
               </button>
               <div className="header-actions">
                 {currentPage !== 'home' && (
@@ -358,7 +358,7 @@ function App() {
 
         <footer className="app-footer">
           <div className="container">
-            <p>© 2024 ExamGen. AI 기반 시험 문제 생성 서비스</p>
+            <p>© 2025 GenGen. AI 기반 시험 문제 생성 서비스</p>
           </div>
         </footer>
       </div>

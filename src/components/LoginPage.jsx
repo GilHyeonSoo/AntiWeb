@@ -19,7 +19,7 @@ function LoginPage({ onBack, onSwitchToSignup }) {
             <div className="auth-card">
                 <div className="auth-header">
                     <h1>로그인</h1>
-                    <p>ExamGen에 오신 것을 환영합니다</p>
+                    <p>GenGen에 오신 것을 환영합니다</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>
