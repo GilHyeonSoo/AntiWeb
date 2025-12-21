@@ -169,6 +169,9 @@ a:hover {
   background: var(--color-accent);
   color: white;
   box-shadow: var(--shadow-sm);
+  border: 9px solid transparent;
+  border-radius: 6px;
+  font-size: 15px;
 }
 
 .btn-primary:hover:not(:disabled) {
