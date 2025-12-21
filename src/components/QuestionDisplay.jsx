@@ -2,48 +2,129 @@ import { useState } from 'react';
 import './QuestionDisplay.css';
 
 function QuestionDisplay({ questions, onReset }) {
-    const [expandedQuestions, setExpandedQuestions] = useState({});
-    const [showAllAnswers, setShowAllAnswers] = useState(false);
+    // Current question index for navigation
+    const [currentIndex, setCurrentIndex] = useState(0);
 
-    const toggleAnswer = (index) => {
-        setExpandedQuestions(prev => ({
+    // User's answers for each question { questionIndex: selectedOptionIndex or answer }
+    const [userAnswers, setUserAnswers] = useState({});
+
+    // Whether each question has been answered (locked)
+    const [answeredQuestions, setAnsweredQuestions] = useState({});
+
+    const currentQuestion = questions[currentIndex];
+    const totalQuestions = questions.length;
+
+    // Navigate to previous question
+    const goToPrevious = () => {
+        if (currentIndex > 0) {
+            setCurrentIndex(currentIndex - 1);
+        }
+    };
+
+    // Navigate to next question
+    const goToNext = () => {
+        if (currentIndex < totalQuestions - 1) {
+            setCurrentIndex(currentIndex + 1);
+        }
+    };
+
+    // Handle option selection for multiple choice
+    const handleOptionSelect = (optionIndex) => {
+        // If already answered, don't allow changes
+        if (answeredQuestions[currentIndex]) return;
+
+        const selectedOption = currentQuestion.options[optionIndex];
+
+        setUserAnswers(prev => ({
             ...prev,
-            [index]: !prev[index]
+            [currentIndex]: {
+                selectedIndex: optionIndex,
+                selectedValue: selectedOption,
+                isCorrect: selectedOption === currentQuestion.answer
+            }
+        }));
+
+        setAnsweredQuestions(prev => ({
+            ...prev,
+            [currentIndex]: true
         }));
     };
 
-    const toggleAllAnswers = () => {
-        if (showAllAnswers) {
-            setExpandedQuestions({});
-        } else {
-            const allExpanded = {};
-            questions.forEach((_, index) => {
-                allExpanded[index] = true;
-            });
-            setExpandedQuestions(allExpanded);
-        }
-        setShowAllAnswers(!showAllAnswers);
+    // Handle answer for non-multiple choice (short answer, etc.)
+    const handleTextAnswer = (value) => {
+        if (answeredQuestions[currentIndex]) return;
+
+        setUserAnswers(prev => ({
+            ...prev,
+            [currentIndex]: {
+                selectedValue: value,
+                isCorrect: value.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase()
+            }
+        }));
     };
 
-    const handlePrint = () => {
-        window.print();
+    const submitTextAnswer = () => {
+        if (!userAnswers[currentIndex]?.selectedValue) return;
+
+        setAnsweredQuestions(prev => ({
+            ...prev,
+            [currentIndex]: true
+        }));
     };
 
-    const handleCopyAll = async () => {
-        const text = questions.map((q, i) =>
-            `${i + 1}. ${q.question}\n답: ${q.answer}${q.explanation ? `\n해설: ${q.explanation}` : ''}`
-        ).join('\n\n');
+    // Get the current answer state
+    const currentAnswerState = userAnswers[currentIndex];
+    const isCurrentAnswered = answeredQuestions[currentIndex];
 
-        try {
-            await navigator.clipboard.writeText(text);
-            // Could add a toast notification here
-        } catch (err) {
-            console.error('Failed to copy:', err);
+    // Calculate score
+    const answeredCount = Object.keys(answeredQuestions).length;
+    const correctCount = Object.values(userAnswers).filter(a => a.isCorrect).length;
+
+    // Get question type label
+    const getTypeLabel = (type) => {
+        const labels = {
+            'multiple': '객관식',
+            'short': '단답형',
+            'essay': '서술형',
+            'ox': 'O/X',
+            'blank': '빈칸채우기'
+        };
+        return labels[type] || type;
+    };
+
+    // Format answer for display (handles O/X boolean)
+    const formatAnswer = (answer, type) => {
+        if (type === 'ox') {
+            if (answer === true || answer === 'true' || answer === 'O') return 'O';
+            if (answer === false || answer === 'false' || answer === 'X') return 'X';
         }
+        return answer;
+    };
+
+    // Check if option is the correct answer
+    const isCorrectOption = (option) => option === currentQuestion.answer;
+
+    // Get option class based on state
+    const getOptionClass = (option, optionIndex) => {
+        if (!isCurrentAnswered) {
+            return 'option-item';
+        }
+
+        const isSelected = currentAnswerState?.selectedIndex === optionIndex;
+        const isCorrect = isCorrectOption(option);
+
+        if (isCorrect) {
+            return 'option-item correct';
+        }
+        if (isSelected && !isCorrect) {
+            return 'option-item incorrect';
+        }
+        return 'option-item disabled';
     };
 
     return (
         <div className="question-display-container animate-fade-in">
+            {/* Header with progress bars */}
             <div className="result-header">
                 <div className="result-info">
                     <div className="result-icon-wrapper">
@@ -53,121 +134,221 @@ function QuestionDisplay({ questions, onReset }) {
                         </svg>
                     </div>
                     <div>
-                        <h2>문제 생성 완료!</h2>
-                        <p>총 <strong>{questions.length}개</strong>의 문제가 생성되었습니다</p>
+                        <h2>문제 풀이</h2>
                     </div>
                 </div>
 
-                <div className="result-actions">
-                    <button className="btn btn-secondary" onClick={toggleAllAnswers}>
-                        {showAllAnswers ? (
-                            <>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                                    <line x1="1" y1="1" x2="23" y2="23" />
-                                </svg>
-                                정답 숨기기
-                            </>
-                        ) : (
-                            <>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                    <circle cx="12" cy="12" r="3" />
-                                </svg>
-                                정답 모두 보기
-                            </>
-                        )}
-                    </button>
-                    <button className="btn btn-secondary" onClick={handleCopyAll}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                        </svg>
-                        복사
-                    </button>
-                    <button className="btn btn-secondary print-btn" onClick={handlePrint}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="6,9 6,2 18,2 18,9" />
-                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                            <rect x="6" y="14" width="12" height="8" />
-                        </svg>
-                        인쇄
-                    </button>
+                {/* Progress Bars */}
+                <div className="progress-bars">
+                    <div className="progress-bar-item">
+                        <div className="progress-bar-header">
+                            <span className="progress-bar-label">진행률</span>
+                            <span className="progress-bar-value">{answeredCount}/{totalQuestions}</span>
+                        </div>
+                        <div className="progress-bar-track">
+                            <div
+                                className="progress-bar-fill progress"
+                                style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {answeredCount > 0 && (
+                        <div className="progress-bar-item">
+                            <div className="progress-bar-header">
+                                <span className="progress-bar-label">정답률</span>
+                                <span className={`progress-bar-value ${correctCount === answeredCount ? 'perfect' : ''}`}>
+                                    {correctCount}/{answeredCount} ({Math.round((correctCount / answeredCount) * 100)}%)
+                                </span>
+                            </div>
+                            <div className="progress-bar-track">
+                                <div
+                                    className={`progress-bar-fill accuracy ${correctCount === answeredCount ? 'perfect' : ''}`}
+                                    style={{ width: `${(correctCount / answeredCount) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="questions-list">
-                {questions.map((q, index) => (
-                    <div
-                        key={index}
-                        className={`question-card ${expandedQuestions[index] ? 'expanded' : ''}`}
-                    >
-                        <div className="question-header">
-                            <span className="question-number">{index + 1}</span>
-                            <div className="question-type-badge">
-                                {q.type === 'multiple' ? '객관식' : q.type === 'short' ? '단답형' : '서술형'}
+            {/* Navigation */}
+            <div className="question-navigation">
+                <button
+                    className="nav-arrow nav-prev"
+                    onClick={goToPrevious}
+                    disabled={currentIndex === 0}
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="15,18 9,12 15,6" />
+                    </svg>
+                </button>
+
+                <div className="question-indicator">
+                    <span className="current-num">{currentIndex + 1}</span>
+                    <span className="separator">/</span>
+                    <span className="total-num">{totalQuestions}</span>
+                </div>
+
+                <button
+                    className="nav-arrow nav-next"
+                    onClick={goToNext}
+                    disabled={currentIndex === totalQuestions - 1}
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="9,18 15,12 9,6" />
+                    </svg>
+                </button>
+            </div>
+
+            {/* Question Card */}
+            <div className="question-card single-view">
+                <div className="question-header">
+                    <span className="question-number">Q{currentIndex + 1}</span>
+                    <div className="question-type-badge">{getTypeLabel(currentQuestion.type)}</div>
+                    {isCurrentAnswered && (
+                        <div className={`answer-status ${currentAnswerState?.isCorrect ? 'correct' : 'incorrect'}`}>
+                            {currentAnswerState?.isCorrect ? '정답!' : '오답'}
+                        </div>
+                    )}
+                </div>
+
+                <div className="question-content">
+                    <p className={`question-text ${['ox', 'blank', 'essay', 'short'].includes(currentQuestion.type) ? 'ox-question-text' : ''}`}>{currentQuestion.question}</p>
+
+                    {/* Multiple Choice Options */}
+                    {currentQuestion.options && currentQuestion.options.length > 0 && (
+                        <div className="question-options">
+                            {currentQuestion.options.map((option, optIndex) => (
+                                <button
+                                    key={optIndex}
+                                    className={getOptionClass(option, optIndex)}
+                                    onClick={() => handleOptionSelect(optIndex)}
+                                    disabled={isCurrentAnswered}
+                                >
+                                    <span className="option-label">
+                                        {String.fromCharCode(65 + optIndex)}
+                                    </span>
+                                    <span className="option-text">{option}</span>
+                                    {isCurrentAnswered && isCorrectOption(option) && (
+                                        <span className="option-icon correct-icon">✓</span>
+                                    )}
+                                    {isCurrentAnswered && currentAnswerState?.selectedIndex === optIndex && !isCorrectOption(option) && (
+                                        <span className="option-icon incorrect-icon">✗</span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* O/X Question Buttons */}
+                    {currentQuestion.type === 'ox' && (!currentQuestion.options || currentQuestion.options.length === 0) && (
+                        <div className="ox-buttons">
+                            <button
+                                className={`ox-btn ox-o ${isCurrentAnswered ? (currentQuestion.answer === true || currentQuestion.answer === 'O' || currentQuestion.answer === 'true' ? 'correct' : currentAnswerState?.selectedValue === 'O' ? 'incorrect' : 'disabled') : ''}`}
+                                onClick={() => {
+                                    if (answeredQuestions[currentIndex]) return;
+                                    const isCorrect = currentQuestion.answer === true || currentQuestion.answer === 'O' || currentQuestion.answer === 'true';
+                                    setUserAnswers(prev => ({
+                                        ...prev,
+                                        [currentIndex]: { selectedValue: 'O', isCorrect }
+                                    }));
+                                    setAnsweredQuestions(prev => ({ ...prev, [currentIndex]: true }));
+                                }}
+                                disabled={isCurrentAnswered}
+                            >
+                                <span className="ox-symbol">O</span>
+                                <span className="ox-label">맞다</span>
+                            </button>
+                            <button
+                                className={`ox-btn ox-x ${isCurrentAnswered ? (currentQuestion.answer === false || currentQuestion.answer === 'X' || currentQuestion.answer === 'false' ? 'correct' : currentAnswerState?.selectedValue === 'X' ? 'incorrect' : 'disabled') : ''}`}
+                                onClick={() => {
+                                    if (answeredQuestions[currentIndex]) return;
+                                    const isCorrect = currentQuestion.answer === false || currentQuestion.answer === 'X' || currentQuestion.answer === 'false';
+                                    setUserAnswers(prev => ({
+                                        ...prev,
+                                        [currentIndex]: { selectedValue: 'X', isCorrect }
+                                    }));
+                                    setAnsweredQuestions(prev => ({ ...prev, [currentIndex]: true }));
+                                }}
+                                disabled={isCurrentAnswered}
+                            >
+                                <span className="ox-symbol">X</span>
+                                <span className="ox-label">틀리다</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Short Answer / Essay Input */}
+                    {currentQuestion.type !== 'ox' && (!currentQuestion.options || currentQuestion.options.length === 0) && (
+                        <div className="text-answer-section">
+                            <input
+                                type="text"
+                                className={`text-answer-input ${isCurrentAnswered ? (currentAnswerState?.isCorrect ? 'correct' : 'incorrect') : ''}`}
+                                placeholder="정답을 입력하세요..."
+                                value={currentAnswerState?.selectedValue || ''}
+                                onChange={(e) => handleTextAnswer(e.target.value)}
+                                disabled={isCurrentAnswered}
+                            />
+                            {!isCurrentAnswered && (
+                                <button
+                                    className="btn btn-primary submit-answer-btn"
+                                    onClick={submitTextAnswer}
+                                    disabled={!currentAnswerState?.selectedValue}
+                                >
+                                    제출
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Explanation Section - Shows after answering */}
+                {isCurrentAnswered && (
+                    <div className={`feedback-section animate-fade-in ${currentAnswerState?.isCorrect ? 'correct' : 'incorrect'}`}>
+                        <div className="feedback-header">
+                            <span className="feedback-icon">
+                                {currentAnswerState?.isCorrect ? '🎉' : '💡'}
+                            </span>
+                            <span className="feedback-title">
+                                {currentAnswerState?.isCorrect ? '정답입니다!' : '아쉽네요, 다시 확인해보세요.'}
+                            </span>
+                        </div>
+
+                        {!currentAnswerState?.isCorrect && (
+                            <div className="your-answer">
+                                <span className="label">내가 선택한 답:</span>
+                                <span className="value">{currentAnswerState?.selectedValue || '-'}</span>
                             </div>
+                        )}
+
+                        <div className="correct-answer">
+                            <span className="label">정답:</span>
+                            <span className="value">{formatAnswer(currentQuestion.answer, currentQuestion.type)}</span>
                         </div>
 
-                        <div className="question-content">
-                            <p className="question-text">{q.question}</p>
-
-                            {q.options && (
-                                <div className="question-options">
-                                    {q.options.map((option, optIndex) => (
-                                        <div
-                                            key={optIndex}
-                                            className={`option-item ${expandedQuestions[index] && option === q.answer ? 'correct' : ''}`}
-                                        >
-                                            <span className="option-label">
-                                                {String.fromCharCode(65 + optIndex)}
-                                            </span>
-                                            <span className="option-text">{option}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            className="answer-toggle"
-                            onClick={() => toggleAnswer(index)}
-                        >
-                            {expandedQuestions[index] ? (
-                                <>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polyline points="18,15 12,9 6,15" />
-                                    </svg>
-                                    정답 숨기기
-                                </>
-                            ) : (
-                                <>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polyline points="6,9 12,15 18,9" />
-                                    </svg>
-                                    정답 보기
-                                </>
-                            )}
-                        </button>
-
-                        {expandedQuestions[index] && (
-                            <div className="answer-section animate-fade-in">
-                                <div className="answer-box">
-                                    <span className="answer-label">정답</span>
-                                    <span className="answer-text">{q.answer}</span>
-                                </div>
-                                {q.explanation && (
-                                    <div className="explanation-box">
-                                        <span className="explanation-label">해설</span>
-                                        <p className="explanation-text">{q.explanation}</p>
-                                    </div>
-                                )}
+                        {currentQuestion.explanation && (
+                            <div className="explanation-box">
+                                <span className="explanation-label">해설</span>
+                                <p className="explanation-text">{currentQuestion.explanation}</p>
                             </div>
                         )}
                     </div>
+                )}
+            </div>
+
+            {/* Progress Dots */}
+            <div className="progress-dots">
+                {questions.map((_, index) => (
+                    <button
+                        key={index}
+                        className={`dot ${index === currentIndex ? 'active' : ''} ${answeredQuestions[index] ? (userAnswers[index]?.isCorrect ? 'correct' : 'incorrect') : ''}`}
+                        onClick={() => setCurrentIndex(index)}
+                    />
                 ))}
             </div>
 
+            {/* Bottom Actions */}
             <div className="bottom-actions">
                 <button className="btn btn-primary btn-lg" onClick={onReset}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

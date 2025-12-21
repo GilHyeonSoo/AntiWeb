@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { logOut } from './firebase';
+import { generateQuestions, QUESTION_TYPES, checkAIAvailability } from './services/aiApi';
 import HomePage from './components/HomePage';
 import FileUpload from './components/FileUpload';
 import YoutubeInput from './components/YoutubeInput';
@@ -102,6 +103,8 @@ function AppContent() {
   const [selectedQuestionType, setSelectedQuestionType] = useState('');
   const [questions, setQuestions] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState('');
 
   // Auth state from context
   const { user, isAuthenticated, loading } = useAuth();
@@ -120,6 +123,13 @@ function AppContent() {
     setCurrentPage('home');
     setCurrentStep(1);
     resetState();
+  };
+
+  // Go back to question type selector (for "새로운 문제 생성하기")
+  const handleBackToQuestionType = () => {
+    setSelectedQuestionType('');
+    setQuestions([]);
+    setCurrentStep(3);
   };
 
   // Reset all state
@@ -164,15 +174,61 @@ function AppContent() {
     setCurrentStep(2);
   };
 
-  // Question Type selection
-  const handleSelectQuestionType = async (type) => {
+  // Question Type selection - map UI types to API types
+  const mapQuestionType = (uiType) => {
+    const typeMap = {
+      'multiple': QUESTION_TYPES.MULTIPLE_CHOICE,
+      'short': QUESTION_TYPES.SHORT_ANSWER,
+      'essay': QUESTION_TYPES.SHORT_ANSWER, // Use short answer for essay
+      'ox': QUESTION_TYPES.TRUE_FALSE,
+      'blank': QUESTION_TYPES.FILL_BLANK
+    };
+    return typeMap[uiType] || QUESTION_TYPES.MULTIPLE_CHOICE;
+  };
+
+  const handleSelectQuestionType = async (type, count = 5) => {
     setSelectedQuestionType(type);
+    setIsGenerating(true);
+    setGenerationError('');
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // Check if AI is available
+      const aiAvailable = await checkAIAvailability();
 
-    setQuestions(generateMockQuestions(type));
-    setCurrentStep(4);
+      if (!aiAvailable) {
+        // Fallback to mock data if AI not available
+        console.log('AI not available, using mock data');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setQuestions(generateMockQuestions(type).slice(0, count));
+      } else {
+        // Use real AI to generate questions
+        const apiType = mapQuestionType(type);
+        const textToUse = editedText || extractedText || MOCK_EXTRACTED_TEXT;
+
+        const result = await generateQuestions(textToUse, apiType, count);
+
+        // Format questions for display
+        const formattedQuestions = result.questions.map(q => ({
+          type: type,
+          question: q.question,
+          options: q.options || [],
+          answer: typeof q.answer === 'number' ? q.options[q.answer] : q.answer,
+          explanation: q.explanation || ''
+        }));
+
+        setQuestions(formattedQuestions);
+      }
+
+      setCurrentStep(4);
+    } catch (error) {
+      console.error('Question generation error:', error);
+      setGenerationError(error.message);
+      // Fallback to mock data on error
+      setQuestions(generateMockQuestions(type));
+      setCurrentStep(4);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Handle logout
@@ -246,6 +302,8 @@ function AppContent() {
           <QuestionTypeSelector
             onSelect={handleSelectQuestionType}
             onBack={handleBackToEditor}
+            isLoading={isGenerating}
+            textLength={(editedText || extractedText || '').length}
           />
         );
       }
@@ -253,7 +311,7 @@ function AppContent() {
         return (
           <QuestionDisplay
             questions={questions}
-            onReset={handleGoHome}
+            onReset={handleBackToQuestionType}
           />
         );
       }
@@ -278,6 +336,8 @@ function AppContent() {
           <QuestionTypeSelector
             onSelect={handleSelectQuestionType}
             onBack={handleBackToEditor}
+            isLoading={isGenerating}
+            textLength={(editedText || extractedText || '').length}
           />
         );
       }
@@ -285,7 +345,7 @@ function AppContent() {
         return (
           <QuestionDisplay
             questions={questions}
-            onReset={handleGoHome}
+            onReset={handleBackToQuestionType}
           />
         );
       }
@@ -366,15 +426,7 @@ function AppContent() {
                 <span className="logo-text">GenGen</span>
               </button>
               <div className="header-actions">
-                {currentPage !== 'home' && (
-                  <button className="home-btn btn btn-secondary" onClick={handleGoHome}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                      <polyline points="9,22 9,12 15,12 15,22" />
-                    </svg>
-                    홈
-                  </button>
-                )}
+
 
                 {isAuthenticated ? (
                   /* Logged in state */
