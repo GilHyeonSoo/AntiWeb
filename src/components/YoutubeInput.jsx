@@ -1,19 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+    extractVideoId,
+    getVideoDetails,
+    getVideoContentAsText,
+    isYoutubeApiConfigured,
+    checkBackendServer,
+    formatDuration
+} from '../services/youtubeApi';
 import './YoutubeInput.css';
 
 function YoutubeInput({ onSubmit, onBack }) {
     const [url, setUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isFetchingInfo, setIsFetchingInfo] = useState(false);
     const [error, setError] = useState('');
+    const [videoInfo, setVideoInfo] = useState(null);
+    const [apiConfigured] = useState(isYoutubeApiConfigured());
+    const [backendAvailable, setBackendAvailable] = useState(null); // null = checking, true/false = result
+
+    // Check backend server on mount
+    useEffect(() => {
+        const checkServer = async () => {
+            const available = await checkBackendServer();
+            setBackendAvailable(available);
+        };
+        checkServer();
+    }, []);
 
     const validateYoutubeUrl = (url) => {
         const patterns = [
             /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=[\w-]+/,
             /^(https?:\/\/)?(www\.)?youtu\.be\/[\w-]+/,
-            /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[\w-]+/
+            /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[\w-]+/,
+            /^(https?:\/\/)?(www\.)?youtube\.com\/shorts\/[\w-]+/
         ];
         return patterns.some(pattern => pattern.test(url));
     };
+
+    // Fetch video info when URL changes
+    const fetchVideoInfo = useCallback(async (videoId) => {
+        if (!apiConfigured) return;
+
+        setIsFetchingInfo(true);
+        try {
+            const details = await getVideoDetails(videoId);
+            setVideoInfo(details);
+            setError('');
+        } catch (err) {
+            setVideoInfo(null);
+            // Don't show error for info fetch, just clear the info
+            console.warn('Video info fetch failed:', err);
+        } finally {
+            setIsFetchingInfo(false);
+        }
+    }, [apiConfigured]);
+
+    useEffect(() => {
+        const videoId = extractVideoId(url);
+        if (videoId && validateYoutubeUrl(url)) {
+            fetchVideoInfo(videoId);
+        } else {
+            setVideoInfo(null);
+        }
+    }, [url, fetchVideoInfo]);
 
     const handleSubmit = async () => {
         setError('');
@@ -28,13 +77,30 @@ function YoutubeInput({ onSubmit, onBack }) {
             return;
         }
 
+        const videoId = extractVideoId(url);
+        if (!videoId) {
+            setError('영상 ID를 추출할 수 없습니다');
+            return;
+        }
+
         setIsLoading(true);
 
-        // Simulate API call for transcription (will be replaced with actual API)
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            if (apiConfigured) {
+                // Use YouTube API to get content
+                const result = await getVideoContentAsText(videoId);
 
-        // Mock extracted text from YouTube video
-        const mockText = `안녕하세요, 오늘은 인공지능의 기초에 대해 알아보겠습니다.
+                let formattedText = result.text;
+
+                // Add warning if using description fallback
+                if (result.warning) {
+                    formattedText = `⚠️ ${result.warning}\n\n${formattedText}`;
+                }
+
+                onSubmit(formattedText);
+            } else {
+                // Fallback mock data when API is not configured
+                const mockText = `안녕하세요, 오늘은 인공지능의 기초에 대해 알아보겠습니다.
 
 인공지능, 줄여서 AI라고 하는데요, 이것은 컴퓨터가 인간처럼 생각하고 학습할 수 있게 만드는 기술입니다.
 
@@ -46,16 +112,16 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
 
 다음 시간에는 머신러닝의 세 가지 유형인 지도학습, 비지도학습, 강화학습에 대해 자세히 알아보겠습니다.`;
 
-        onSubmit(mockText);
-        setIsLoading(false);
+                onSubmit(mockText);
+            }
+        } catch (err) {
+            setError(err.message || '텍스트 추출에 실패했습니다');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const getVideoId = (url) => {
-        const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/);
-        return match ? match[1] : null;
-    };
-
-    const videoId = getVideoId(url);
+    const videoId = extractVideoId(url);
 
     return (
         <div className="youtube-input-container animate-fade-in">
@@ -74,9 +140,31 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
                         </svg>
                     </div>
                     <h2>유튜브 영상 텍스트 추출</h2>
-                    <p>유튜브 영상의 음성을 텍스트로 변환합니다</p>
+                    <p>유튜브 영상의 자막을 텍스트로 추출합니다</p>
                 </div>
             </div>
+
+            {/* Backend Server Status */}
+            {backendAvailable === false && (
+                <div className="api-warning">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    <span>자막 서버가 실행되지 않았습니다. <code>cd server && npm start</code>로 서버를 시작해주세요.</span>
+                </div>
+            )}
+
+            {backendAvailable === true && (
+                <div className="api-success">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    <span>자막 서버 연결됨 - 자막 추출이 가능합니다</span>
+                </div>
+            )}
 
             <div className="url-input-section">
                 <label className="input-label">유튜브 링크</label>
@@ -95,7 +183,10 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
                     {url && (
                         <button
                             className="clear-btn"
-                            onClick={() => setUrl('')}
+                            onClick={() => {
+                                setUrl('');
+                                setVideoInfo(null);
+                            }}
                             aria-label="입력 지우기"
                         >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -120,20 +211,35 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
 
             {videoId && (
                 <div className="video-preview animate-fade-in">
-                    <div className="preview-label">미리보기</div>
-                    <div className="video-thumbnail">
-                        <img
-                            src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                            alt="영상 썸네일"
-                            onError={(e) => {
-                                e.target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                            }}
-                        />
-                        <div className="play-overlay">
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                                <polygon points="5,3 19,12 5,21" />
-                            </svg>
+                    <div className="preview-label">
+                        {isFetchingInfo ? '정보 로딩 중...' : '미리보기'}
+                    </div>
+                    <div className="video-preview-content">
+                        <div className="video-thumbnail">
+                            <img
+                                src={videoInfo?.thumbnails?.high?.url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                alt="영상 썸네일"
+                                onError={(e) => {
+                                    e.target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                }}
+                            />
+                            <div className="play-overlay">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="5,3 19,12 5,21" />
+                                </svg>
+                            </div>
+                            {videoInfo?.duration && (
+                                <div className="video-duration">
+                                    {formatDuration(videoInfo.duration)}
+                                </div>
+                            )}
                         </div>
+                        {videoInfo && (
+                            <div className="video-details">
+                                <h3 className="video-title">{videoInfo.title}</h3>
+                                <p className="video-channel">{videoInfo.channelTitle}</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -165,7 +271,7 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
                 <h4>💡 팁</h4>
                 <ul>
                     <li>자막이 있는 영상에서 더 정확한 결과를 얻을 수 있습니다</li>
-                    <li>영상 길이가 길수록 추출 시간이 오래 걸릴 수 있습니다</li>
+                    <li>자막이 없는 경우 영상 설명이 대신 추출됩니다</li>
                     <li>강의나 설명 영상에서 좋은 학습 자료를 추출할 수 있습니다</li>
                 </ul>
             </div>
@@ -174,3 +280,4 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
 }
 
 export default YoutubeInput;
+
