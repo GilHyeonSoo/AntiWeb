@@ -105,6 +105,136 @@
     color: var(--color-border);
 }
 
+/* View Mode Toggle */
+.view-mode-toggle {
+    display: flex;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.mode-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: none;
+    background: var(--color-background);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.mode-btn:not(:last-child) {
+    border-right: 1px solid var(--color-border);
+}
+
+.mode-btn.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+.mode-btn:hover:not(.active) {
+    background: var(--color-surface);
+}
+
+/* Markdown Preview */
+.markdown-preview {
+    width: 100%;
+    min-height: 400px;
+    flex: 1;
+    padding: var(--spacing-xl);
+    font-size: var(--font-size-base);
+    line-height: 1.8;
+    overflow-y: auto;
+    background: var(--color-background);
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3 {
+    margin-top: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text);
+}
+
+.markdown-preview h1 {
+    font-size: var(--font-size-2xl);
+}
+
+.markdown-preview h2 {
+    font-size: var(--font-size-xl);
+}
+
+.markdown-preview h3 {
+    font-size: var(--font-size-lg);
+}
+
+.markdown-preview p {
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text);
+}
+
+.markdown-preview hr {
+    margin: var(--spacing-xl) 0;
+    border: none;
+    border-top: 2px dashed var(--color-border);
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+    margin-bottom: var(--spacing-md);
+    padding-left: var(--spacing-xl);
+}
+
+.markdown-preview li {
+    margin-bottom: var(--spacing-xs);
+}
+
+.markdown-preview code {
+    padding: 2px 6px;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9em;
+}
+
+.markdown-preview pre {
+    padding: var(--spacing-md);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin-bottom: var(--spacing-md);
+}
+
+.markdown-preview pre code {
+    padding: 0;
+    background: none;
+}
+
+/* KaTeX styling */
+.markdown-preview .katex-display {
+    margin: var(--spacing-lg) 0;
+    overflow-x: auto;
+}
+
+.markdown-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--spacing-md);
+}
+
+.markdown-preview th,
+.markdown-preview td {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.markdown-preview th {
+    background: var(--color-surface);
+    font-weight: var(--font-weight-semibold);
+}
+
 .textarea-wrapper {
     position: relative;
     flex: 1;

@@ -165,3 +165,36 @@ export const formatDuration = (isoDuration) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
+// Format raw subtitle text using DeepSeek AI
+export const formatSubtitleWithAI = async (rawText) => {
+    try {
+        const response = await fetch(`${BACKEND_API_URL}/api/format-subtitle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text: rawText })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            console.error('Subtitle formatting failed:', data.error);
+            return {
+                success: false,
+                error: data.error || 'Formatting failed'
+            };
+        }
+
+        return {
+            success: true,
+            formattedText: data.formattedText
+        };
+    } catch (error) {
+        console.error('Subtitle formatting error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+};

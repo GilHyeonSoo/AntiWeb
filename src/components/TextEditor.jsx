@@ -1,9 +1,14 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './TextEditor.css';
 
 function TextEditor({ extractedText, onBack, onNext }) {
     const [text, setText] = useState(extractedText);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [viewMode, setViewMode] = useState('edit'); // 'edit' or 'preview'
 
     const handleTextChange = (e) => {
         setText(e.target.value);
@@ -42,6 +47,21 @@ function TextEditor({ extractedText, onBack, onNext }) {
                             </svg>
                             추출된 텍스트
                         </span>
+                        {/* View Mode Toggle */}
+                        <div className="view-mode-toggle">
+                            <button
+                                className={`mode-btn ${viewMode === 'edit' ? 'active' : ''}`}
+                                onClick={() => setViewMode('edit')}
+                            >
+                                편집
+                            </button>
+                            <button
+                                className={`mode-btn ${viewMode === 'preview' ? 'active' : ''}`}
+                                onClick={() => setViewMode('preview')}
+                            >
+                                미리보기
+                            </button>
+                        </div>
                     </div>
                     <div className="toolbar-actions">
                         <div className="text-stats">
@@ -68,12 +88,23 @@ function TextEditor({ extractedText, onBack, onNext }) {
                 {isExpanded && (
                     <>
                         <div className="textarea-wrapper">
-                            <textarea
-                                className="input text-area"
-                                value={text}
-                                onChange={handleTextChange}
-                                placeholder="텍스트가 여기에 표시됩니다..."
-                            />
+                            {viewMode === 'edit' ? (
+                                <textarea
+                                    className="input text-area"
+                                    value={text}
+                                    onChange={handleTextChange}
+                                    placeholder="텍스트가 여기에 표시됩니다..."
+                                />
+                            ) : (
+                                <div className="markdown-preview">
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkMath]}
+                                        rehypePlugins={[rehypeKatex]}
+                                    >
+                                        {text}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
                             <div className="textarea-gradient" />
                         </div>
 
@@ -84,7 +115,7 @@ function TextEditor({ extractedText, onBack, onNext }) {
                             </div>
                             <div className="tip-item">
                                 <span className="tip-icon">📝</span>
-                                <span>핵심 개념을 강조하거나 추가 설명을 넣을 수 있습니다</span>
+                                <span>수학 수식은 $수식$ 또는 $$수식$$ 형식으로 표시됩니다</span>
                             </div>
                         </div>
                     </>
@@ -111,4 +142,3 @@ function TextEditor({ extractedText, onBack, onNext }) {
 }
 
 export default TextEditor;
-

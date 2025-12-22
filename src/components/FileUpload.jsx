@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import './FileUpload.css';
 
-function FileUpload({ onFileSelect, onBack }) {
+function FileUpload({ onFileSelect, onBack, isProcessing = false, processingMessage = '' }) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState('');
@@ -147,7 +147,15 @@ function FileUpload({ onFileSelect, onBack }) {
           className="file-input"
         />
 
-        {selectedFile ? (
+        {isProcessing ? (
+          <div className="processing-overlay">
+            <div className="processing-spinner"></div>
+            <div className="processing-text">
+              <span className="processing-title">PDF 텍스트 추출 중...</span>
+              <span className="processing-message">{processingMessage || 'Gemini AI가 분석 중입니다'}</span>
+            </div>
+          </div>
+        ) : selectedFile ? (
           <div className="selected-file">
             {getFileIcon(selectedFile.name)}
             <div className="file-info">

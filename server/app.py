@@ -145,6 +145,77 @@ def get_transcript(video_id):
         else:
             return jsonify({'success': False, 'error': f'오류: {error_str}'}), 500
 
+
+# ============ Subtitle Formatting with DeepSeek ============
+
+@app.route('/api/format-subtitle', methods=['POST'])
+def format_subtitle():
+    """Format raw subtitle text into readable markdown using DeepSeek."""
+    if not deepseek_client:
+        return jsonify({
+            'success': False,
+            'error': 'DeepSeek API key not configured'
+        }), 500
+    
+    data = request.get_json()
+    if not data or 'text' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'No text provided'
+        }), 400
+    
+    raw_text = data['text']
+    
+    if not raw_text.strip():
+        return jsonify({
+            'success': False,
+            'error': 'Empty text'
+        }), 400
+    
+    try:
+        prompt = f"""다음은 유튜브 영상의 자막입니다. 이 자막을 읽기 쉽게 정리해주세요.
+
+규칙:
+1. 문장을 자연스럽게 이어붙여서 읽기 좋게 만들어주세요.
+2. 주제별로 단락을 나눠주세요.
+3. 중요한 핵심 내용은 **굵은 글씨**로 강조해주세요.
+4. 마크다운 형식으로 출력해주세요.
+5. 불필요한 반복이나 말더듬은 제거해주세요.
+6. 내용을 요약하지 말고, 원래 내용을 최대한 유지하면서 정리해주세요.
+
+자막:
+{raw_text}
+
+위 자막을 읽기 좋게 정리한 마크다운:"""
+
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "당신은 텍스트 정리 전문가입니다. 주어진 자막을 읽기 좋게 정리합니다."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=4000
+        )
+        
+        formatted_text = response.choices[0].message.content.strip()
+        
+        print(f"✅ Formatted subtitle ({len(raw_text)} -> {len(formatted_text)} chars)")
+        
+        return jsonify({
+            'success': True,
+            'formattedText': formatted_text
+        })
+        
+    except Exception as e:
+        print(f"❌ Subtitle formatting error: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'자막 정리 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
 # Question generation prompts
 QUESTION_PROMPTS = {
     'multiple_choice': '''다음 텍스트를 기반으로 객관식 문제를 {count}개 만들어주세요.
@@ -298,8 +369,103 @@ def generate_questions():
             'error': f'문제 생성 중 오류가 발생했습니다: {str(e)}'
         }), 500
 
+
+# ============ PDF OCR with Gemini API ============
+
+# Gemini API setup
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
+if GEMINI_API_KEY and GEMINI_API_KEY != 'your_gemini_api_key_here':
+    print("✅ Gemini API configured for PDF OCR")
+else:
+    print("⚠️ Gemini API key not configured. PDF OCR will be unavailable.")
+
+
+@app.route('/api/pdf/check', methods=['GET'])
+def check_pdf_service():
+    """Check if PDF OCR service is available."""
+    from pdf_processor import check_dependencies
+    
+    issues = check_dependencies()
+    has_api_key = bool(GEMINI_API_KEY and GEMINI_API_KEY != 'your_gemini_api_key_here')
+    
+    if not has_api_key:
+        issues.append("GEMINI_API_KEY not configured")
+    
+    return jsonify({
+        'available': len(issues) == 0 and has_api_key,
+        'hasApiKey': has_api_key,
+        'issues': issues
+    })
+
+
+@app.route('/api/pdf/extract', methods=['POST'])
+def extract_pdf():
+    """Extract text from PDF using Gemini API."""
+    if not GEMINI_API_KEY or GEMINI_API_KEY == 'your_gemini_api_key_here':
+        return jsonify({
+            'success': False,
+            'error': 'Gemini API key not configured'
+        }), 500
+    
+    # Check if file was uploaded
+    if 'file' not in request.files:
+        return jsonify({
+            'success': False,
+            'error': 'No file uploaded'
+        }), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({
+            'success': False,
+            'error': 'No file selected'
+        }), 400
+    
+    if not file.filename.lower().endswith('.pdf'):
+        return jsonify({
+            'success': False,
+            'error': 'Only PDF files are supported'
+        }), 400
+    
+    try:
+        from pdf_processor import process_pdf
+        
+        # Read PDF bytes
+        pdf_bytes = file.read()
+        
+        print(f"📄 Processing PDF: {file.filename} ({len(pdf_bytes)} bytes)")
+        
+        # Process PDF with Gemini
+        result = process_pdf(pdf_bytes, GEMINI_API_KEY)
+        
+        if result['success']:
+            print(f"✅ PDF processed successfully ({result.get('page_count', 0)} pages)")
+            return jsonify({
+                'success': True,
+                'text': result['text'],
+                'pageCount': result.get('page_count', 0)
+            })
+        else:
+            print(f"❌ PDF processing failed: {result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ PDF extraction error: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'PDF 처리 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
 if __name__ == '__main__':
     print("🚀 GenGen Python API Server starting...")
     print("📝 Transcript API: GET /api/transcript/<video_id>")
     print("🧠 Question Generation API: POST /api/generate-questions")
+    print("📄 PDF OCR API: POST /api/pdf/extract")
     app.run(host='0.0.0.0', port=3001, debug=True)

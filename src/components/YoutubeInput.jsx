@@ -5,7 +5,8 @@ import {
     getVideoContentAsText,
     isYoutubeApiConfigured,
     checkBackendServer,
-    formatDuration
+    formatDuration,
+    formatSubtitleWithAI
 } from '../services/youtubeApi';
 import './YoutubeInput.css';
 
@@ -17,6 +18,7 @@ function YoutubeInput({ onSubmit, onBack }) {
     const [videoInfo, setVideoInfo] = useState(null);
     const [apiConfigured] = useState(isYoutubeApiConfigured());
     const [backendAvailable, setBackendAvailable] = useState(null); // null = checking, true/false = result
+    const [formatProgress, setFormatProgress] = useState(''); // 정리 진행 상태
 
     // Check backend server on mount
     useEffect(() => {
@@ -84,23 +86,25 @@ function YoutubeInput({ onSubmit, onBack }) {
         }
 
         setIsLoading(true);
+        setFormatProgress('');
 
         try {
+            let rawText = '';
+
             if (apiConfigured) {
                 // Use YouTube API to get content
+                setFormatProgress('자막 추출 중...');
                 const result = await getVideoContentAsText(videoId);
 
-                let formattedText = result.text;
+                rawText = result.text;
 
                 // Add warning if using description fallback
                 if (result.warning) {
-                    formattedText = `⚠️ ${result.warning}\n\n${formattedText}`;
+                    rawText = `⚠️ ${result.warning}\n\n${rawText}`;
                 }
-
-                onSubmit(formattedText);
             } else {
                 // Fallback mock data when API is not configured
-                const mockText = `안녕하세요, 오늘은 인공지능의 기초에 대해 알아보겠습니다.
+                rawText = `안녕하세요, 오늘은 인공지능의 기초에 대해 알아보겠습니다.
 
 인공지능, 줄여서 AI라고 하는데요, 이것은 컴퓨터가 인간처럼 생각하고 학습할 수 있게 만드는 기술입니다.
 
@@ -111,13 +115,28 @@ function YoutubeInput({ onSubmit, onBack }) {
 GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여 인간과 유사한 텍스트를 생성할 수 있습니다.
 
 다음 시간에는 머신러닝의 세 가지 유형인 지도학습, 비지도학습, 강화학습에 대해 자세히 알아보겠습니다.`;
+            }
 
-                onSubmit(mockText);
+            // Always apply AI formatting when backend is available
+            if (backendAvailable) {
+                setFormatProgress('AI가 자막을 정리하는 중...');
+                const formatResult = await formatSubtitleWithAI(rawText);
+
+                if (formatResult.success) {
+                    onSubmit(formatResult.formattedText);
+                } else {
+                    // If formatting fails, use raw text
+                    console.warn('AI formatting failed, using raw text');
+                    onSubmit(rawText);
+                }
+            } else {
+                onSubmit(rawText);
             }
         } catch (err) {
             setError(err.message || '텍스트 추출에 실패했습니다');
         } finally {
             setIsLoading(false);
+            setFormatProgress('');
         }
     };
 
@@ -253,7 +272,7 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
                     {isLoading ? (
                         <>
                             <span className="spinner" />
-                            텍스트 추출 중...
+                            {formatProgress || '처리 중...'}
                         </>
                     ) : (
                         <>
@@ -272,7 +291,7 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
                 <ul>
                     <li>자막이 있는 영상에서 더 정확한 결과를 얻을 수 있습니다</li>
                     <li>자막이 없는 경우 영상 설명이 대신 추출됩니다</li>
-                    <li>강의나 설명 영상에서 좋은 학습 자료를 추출할 수 있습니다</li>
+                    <li>AI 정리 기능을 사용하면 자막이 읽기 쉽게 정리됩니다</li>
                 </ul>
             </div>
         </div>

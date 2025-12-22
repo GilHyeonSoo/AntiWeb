@@ -1,3 +1,6 @@
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 /* Design System - Exam Question Generator */
 :root {
   /* Colors */
@@ -451,6 +454,3 @@ textarea.input {
     display: none;
   }
 }
-
-/* Google Fonts Import */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');

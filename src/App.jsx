@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { logOut } from './firebase';
 import { generateQuestions, QUESTION_TYPES, checkAIAvailability } from './services/aiApi';
+import { extractPDFText, checkPDFService } from './services/pdfApi';
 import HomePage from './components/HomePage';
 import FileUpload from './components/FileUpload';
 import YoutubeInput from './components/YoutubeInput';
@@ -105,6 +106,7 @@ function AppContent() {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState('');
+  const [pdfProcessing, setPdfProcessing] = useState({ isProcessing: false, progress: '' });
 
   // Auth state from context
   const { user, isAuthenticated, loading } = useAuth();
@@ -140,12 +142,46 @@ function AppContent() {
     setSelectedQuestionType('');
     setQuestions([]);
     setSelectedSubject('');
+    setPdfProcessing({ isProcessing: false, progress: '' });
   };
 
-  // PDF Flow handlers
-  const handleFileSelect = (file) => {
+  // PDF Flow handlers - using Gemini OCR
+  const handleFileSelect = async (file) => {
     setSelectedFile(file);
-    if (file) {
+
+    if (!file) {
+      setExtractedText('');
+      return;
+    }
+
+    // Only process PDF files with Gemini OCR
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfProcessing({ isProcessing: true, progress: 'PDF 분석 중...' });
+
+      try {
+        const result = await extractPDFText(file, (progress) => {
+          setPdfProcessing({ isProcessing: true, progress: progress.message });
+        });
+
+        if (result.success) {
+          setExtractedText(result.text);
+          setPdfProcessing({ isProcessing: false, progress: '' });
+          setCurrentStep(2);
+        } else {
+          // Fallback to mock data if OCR fails
+          console.error('PDF OCR failed:', result.error);
+          setPdfProcessing({ isProcessing: false, progress: '' });
+          setExtractedText(`[PDF OCR 실패: ${result.error}]\n\n텍스트를 직접 입력해주세요.`);
+          setCurrentStep(2);
+        }
+      } catch (error) {
+        console.error('PDF processing error:', error);
+        setPdfProcessing({ isProcessing: false, progress: '' });
+        setExtractedText(`[PDF 처리 오류]\n\n텍스트를 직접 입력해주세요.`);
+        setCurrentStep(2);
+      }
+    } else {
+      // For non-PDF files (DOCX), use mock for now
       setTimeout(() => {
         setExtractedText(MOCK_EXTRACTED_TEXT);
         setCurrentStep(2);
@@ -286,7 +322,14 @@ function AppContent() {
     // PDF Flow
     if (currentPage === 'pdf') {
       if (currentStep === 1) {
-        return <FileUpload onFileSelect={handleFileSelect} onBack={handleGoHome} />;
+        return (
+          <FileUpload
+            onFileSelect={handleFileSelect}
+            onBack={handleGoHome}
+            isProcessing={pdfProcessing.isProcessing}
+            processingMessage={pdfProcessing.progress}
+          />
+        );
       }
       if (currentStep === 2) {
         return (
