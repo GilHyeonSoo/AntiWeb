@@ -1,9 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './QuestionTypeSelector.css';
+
+// Loading tips to show during generation
+const LOADING_TIPS = [
+    '💡 문제 수가 적을수록 더 빨리 생성됩니다!',
+    '📚 AI가 텍스트를 분석하고 있습니다...',
+    '🎯 핵심 개념을 파악하는 중입니다...',
+    '✍️ 시험에 나올 법한 문제를 만들고 있어요!',
+    '🧠 최적의 문제를 선별하는 중...',
+    '⏳ 조금만 기다려주세요, 거의 완료됐어요!'
+];
 
 function QuestionTypeSelector({ onSelect, onBack, isLoading, textLength = 1000 }) {
     const [selectedType, setSelectedType] = useState(null);
     const [questionCount, setQuestionCount] = useState(5);
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [currentTip, setCurrentTip] = useState(0);
+
+    // Elapsed time counter
+    useEffect(() => {
+        let timer;
+        if (isLoading) {
+            setElapsedTime(0);
+            timer = setInterval(() => {
+                setElapsedTime(prev => prev + 1);
+            }, 1000);
+        } else {
+            setElapsedTime(0);
+        }
+        return () => clearInterval(timer);
+    }, [isLoading]);
+
+    // Rotate tips every 5 seconds
+    useEffect(() => {
+        let tipTimer;
+        if (isLoading) {
+            setCurrentTip(0);
+            tipTimer = setInterval(() => {
+                setCurrentTip(prev => (prev + 1) % LOADING_TIPS.length);
+            }, 5000);
+        }
+        return () => clearInterval(tipTimer);
+    }, [isLoading]);
 
     // Calculate recommended question count based on text length
     const getRecommendation = () => {
@@ -74,6 +112,17 @@ function QuestionTypeSelector({ onSelect, onBack, isLoading, textLength = 1000 }
                     <polyline points="14,2 14,8 20,8" />
                     <line x1="16" y1="13" x2="8" y2="13" />
                     <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+            )
+        },
+        {
+            id: 'math',
+            title: '수학 문제',
+            description: 'LaTeX 수식 포함',
+            icon: (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" />
+                    <path d="M17 14v8M14 17h6" />
                 </svg>
             )
         }
@@ -164,7 +213,7 @@ function QuestionTypeSelector({ onSelect, onBack, isLoading, textLength = 1000 }
                 {isLoading ? (
                     <>
                         <span className="spinner"></span>
-                        문제 생성 중...
+                        문제 생성 중... ({elapsedTime}초)
                     </>
                 ) : (
                     <>
@@ -176,6 +225,20 @@ function QuestionTypeSelector({ onSelect, onBack, isLoading, textLength = 1000 }
                     </>
                 )}
             </button>
+
+            {/* Loading Progress Section */}
+            {isLoading && (
+                <div className="loading-progress-section animate-fade-in">
+                    <div className="loading-tip">
+                        {LOADING_TIPS[currentTip]}
+                    </div>
+                    <div className="loading-dots">
+                        <span className={elapsedTime % 3 === 0 ? 'active' : ''}></span>
+                        <span className={elapsedTime % 3 === 1 ? 'active' : ''}></span>
+                        <span className={elapsedTime % 3 === 2 ? 'active' : ''}></span>
+                    </div>
+                </div>
+            )}
 
             <div className="type-hint">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

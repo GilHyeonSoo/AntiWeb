@@ -217,7 +217,8 @@ function AppContent() {
       'short': QUESTION_TYPES.SHORT_ANSWER,
       'essay': QUESTION_TYPES.SHORT_ANSWER, // Use short answer for essay
       'ox': QUESTION_TYPES.TRUE_FALSE,
-      'blank': QUESTION_TYPES.FILL_BLANK
+      'blank': QUESTION_TYPES.FILL_BLANK,
+      'math': QUESTION_TYPES.MATH
     };
     return typeMap[uiType] || QUESTION_TYPES.MULTIPLE_CHOICE;
   };

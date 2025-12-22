@@ -6,14 +6,16 @@ export const QUESTION_TYPES = {
     MULTIPLE_CHOICE: 'multiple_choice',
     SHORT_ANSWER: 'short_answer',
     TRUE_FALSE: 'true_false',
-    FILL_BLANK: 'fill_blank'
+    FILL_BLANK: 'fill_blank',
+    MATH: 'math'
 };
 
 export const QUESTION_TYPE_LABELS = {
     [QUESTION_TYPES.MULTIPLE_CHOICE]: '객관식',
     [QUESTION_TYPES.SHORT_ANSWER]: '단답형',
     [QUESTION_TYPES.TRUE_FALSE]: 'O/X',
-    [QUESTION_TYPES.FILL_BLANK]: '빈칸 채우기'
+    [QUESTION_TYPES.FILL_BLANK]: '빈칸 채우기',
+    [QUESTION_TYPES.MATH]: '수학 문제'
 };
 
 // Check if AI API is available

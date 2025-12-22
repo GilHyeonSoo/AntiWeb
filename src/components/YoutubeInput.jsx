@@ -10,6 +10,15 @@ import {
 } from '../services/youtubeApi';
 import './YoutubeInput.css';
 
+// Loading tips to show during extraction
+const LOADING_TIPS = [
+    '📺 자막을 추출하고 있습니다...',
+    '🤖 AI가 자막을 정리하는 중입니다...',
+    '✨ 읽기 쉽게 문단을 나누고 있어요!',
+    '💡 핵심 내용을 강조하는 중...',
+    '⏳ 조금만 기다려주세요!'
+];
+
 function YoutubeInput({ onSubmit, onBack }) {
     const [url, setUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +28,34 @@ function YoutubeInput({ onSubmit, onBack }) {
     const [apiConfigured] = useState(isYoutubeApiConfigured());
     const [backendAvailable, setBackendAvailable] = useState(null); // null = checking, true/false = result
     const [formatProgress, setFormatProgress] = useState(''); // 정리 진행 상태
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [currentTip, setCurrentTip] = useState(0);
+
+    // Elapsed time counter
+    useEffect(() => {
+        let timer;
+        if (isLoading) {
+            setElapsedTime(0);
+            timer = setInterval(() => {
+                setElapsedTime(prev => prev + 1);
+            }, 1000);
+        } else {
+            setElapsedTime(0);
+        }
+        return () => clearInterval(timer);
+    }, [isLoading]);
+
+    // Rotate tips every 4 seconds
+    useEffect(() => {
+        let tipTimer;
+        if (isLoading) {
+            setCurrentTip(0);
+            tipTimer = setInterval(() => {
+                setCurrentTip(prev => (prev + 1) % LOADING_TIPS.length);
+            }, 4000);
+        }
+        return () => clearInterval(tipTimer);
+    }, [isLoading]);
 
     // Check backend server on mount
     useEffect(() => {
@@ -272,7 +309,7 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
                     {isLoading ? (
                         <>
                             <span className="spinner" />
-                            {formatProgress || '처리 중...'}
+                            {formatProgress || '처리 중...'} ({elapsedTime}초)
                         </>
                     ) : (
                         <>
@@ -285,6 +322,20 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
                     )}
                 </button>
             </div>
+
+            {/* Loading Progress Section */}
+            {isLoading && (
+                <div className="loading-progress-section animate-fade-in">
+                    <div className="loading-tip">
+                        {LOADING_TIPS[currentTip]}
+                    </div>
+                    <div className="loading-dots">
+                        <span className={elapsedTime % 3 === 0 ? 'active' : ''}></span>
+                        <span className={elapsedTime % 3 === 1 ? 'active' : ''}></span>
+                        <span className={elapsedTime % 3 === 2 ? 'active' : ''}></span>
+                    </div>
+                </div>
+            )}
 
             <div className="youtube-tips">
                 <h4>💡 팁</h4>

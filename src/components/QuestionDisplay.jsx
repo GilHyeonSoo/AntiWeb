@@ -1,5 +1,27 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './QuestionDisplay.css';
+
+// Helper to render text with LaTeX support
+// Also converts literal \n to actual newlines for proper markdown rendering
+const MathText = ({ children }) => {
+    // Replace literal \n with actual newlines
+    const processedText = (children || '')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '');
+
+    return (
+        <ReactMarkdown
+            remarkPlugins={[remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+        >
+            {processedText}
+        </ReactMarkdown>
+    );
+};
 
 function QuestionDisplay({ questions, onReset }) {
     // Current question index for navigation
@@ -153,7 +175,7 @@ function QuestionDisplay({ questions, onReset }) {
                         </div>
                     </div>
 
-                    {answeredCount > 0 && (
+                    {answeredCount > 0 && currentQuestion.type !== 'math' && (
                         <div className="progress-bar-item">
                             <div className="progress-bar-header">
                                 <span className="progress-bar-label">정답률</span>
@@ -214,7 +236,9 @@ function QuestionDisplay({ questions, onReset }) {
                 </div>
 
                 <div className="question-content">
-                    <p className={`question-text ${['ox', 'blank', 'essay', 'short'].includes(currentQuestion.type) ? 'ox-question-text' : ''}`}>{currentQuestion.question}</p>
+                    <div className={`question-text ${['ox', 'blank', 'essay', 'short', 'math'].includes(currentQuestion.type) ? 'ox-question-text' : ''}`}>
+                        <MathText>{currentQuestion.question}</MathText>
+                    </div>
 
                     {/* Multiple Choice Options */}
                     {currentQuestion.options && currentQuestion.options.length > 0 && (
@@ -279,8 +303,36 @@ function QuestionDisplay({ questions, onReset }) {
                         </div>
                     )}
 
-                    {/* Short Answer / Essay Input */}
-                    {currentQuestion.type !== 'ox' && (!currentQuestion.options || currentQuestion.options.length === 0) && (
+                    {/* Math Question - Show Solution Button Only */}
+                    {currentQuestion.type === 'math' && (
+                        <div className="math-answer-section">
+                            {!isCurrentAnswered ? (
+                                <button
+                                    className="btn btn-primary show-solution-btn"
+                                    onClick={() => {
+                                        setUserAnswers(prev => ({
+                                            ...prev,
+                                            [currentIndex]: { selectedValue: '풀이 확인', isCorrect: true }
+                                        }));
+                                        setAnsweredQuestions(prev => ({ ...prev, [currentIndex]: true }));
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                    풀이 및 정답 확인
+                                </button>
+                            ) : (
+                                <div className="solution-revealed">
+                                    ✅ 풀이가 아래에 표시됩니다
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Short Answer / Essay Input (Exclude math type) */}
+                    {currentQuestion.type !== 'ox' && currentQuestion.type !== 'math' && (!currentQuestion.options || currentQuestion.options.length === 0) && (
                         <div className="text-answer-section">
                             <input
                                 type="text"
@@ -305,15 +357,18 @@ function QuestionDisplay({ questions, onReset }) {
 
                 {/* Explanation Section - Shows after answering */}
                 {isCurrentAnswered && (
-                    <div className={`feedback-section animate-fade-in ${currentAnswerState?.isCorrect ? 'correct' : 'incorrect'}`}>
-                        <div className="feedback-header">
-                            <span className="feedback-icon">
-                                {currentAnswerState?.isCorrect ? '🎉' : '💡'}
-                            </span>
-                            <span className="feedback-title">
-                                {currentAnswerState?.isCorrect ? '정답입니다!' : '아쉽네요, 다시 확인해보세요.'}
-                            </span>
-                        </div>
+                    <div className={`feedback-section animate-fade-in ${currentQuestion.type === 'math' ? 'math-solution' : currentAnswerState?.isCorrect ? 'correct' : 'incorrect'}`}>
+                        {/* Hide feedback header for math type */}
+                        {currentQuestion.type !== 'math' && (
+                            <div className="feedback-header">
+                                <span className="feedback-icon">
+                                    {currentAnswerState?.isCorrect ? '🎉' : '💡'}
+                                </span>
+                                <span className="feedback-title">
+                                    {currentAnswerState?.isCorrect ? '정답입니다!' : '아쉽네요, 다시 확인해보세요.'}
+                                </span>
+                            </div>
+                        )}
 
                         {!currentAnswerState?.isCorrect && (
                             <div className="your-answer">
@@ -324,13 +379,17 @@ function QuestionDisplay({ questions, onReset }) {
 
                         <div className="correct-answer">
                             <span className="label">정답:</span>
-                            <span className="value">{formatAnswer(currentQuestion.answer, currentQuestion.type)}</span>
+                            <span className="value">
+                                <MathText>{formatAnswer(currentQuestion.answer, currentQuestion.type)}</MathText>
+                            </span>
                         </div>
 
                         {currentQuestion.explanation && (
                             <div className="explanation-box">
                                 <span className="explanation-label">해설</span>
-                                <p className="explanation-text">{currentQuestion.explanation}</p>
+                                <div className="explanation-text">
+                                    <MathText>{currentQuestion.explanation}</MathText>
+                                </div>
                             </div>
                         )}
                     </div>
