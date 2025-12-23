@@ -147,10 +147,6 @@ function QuestionTypeSelector({ onSelect, onBack, isLoading, textLength = 1000 }
                     </svg>
                     뒤로
                 </button>
-                <div className="type-title">
-                    <h2>문제 설정</h2>
-                    <p>유형과 문제 수를 선택하세요</p>
-                </div>
             </div>
 
             {/* Question Type Selection */}

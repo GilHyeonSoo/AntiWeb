@@ -8,6 +8,7 @@ import re
 import os
 import json
 from pathlib import Path
+import cache_manager
 
 # Load environment variables from parent directory (.env in project root)
 env_path = Path(__file__).parent.parent / '.env'
@@ -172,6 +173,18 @@ def format_subtitle():
             'error': 'Empty text'
         }), 400
     
+    # Check cache first
+    cache_key = cache_manager.generate_cache_key('subtitle', raw_text[:500])
+    cached_result = cache_manager.get_cached(cache_key)
+    
+    if cached_result:
+        print(f"📦 Returning cached formatted subtitle")
+        return jsonify({
+            'success': True,
+            'formattedText': cached_result,
+            'cached': True
+        })
+    
     try:
         prompt = f"""다음은 유튜브 영상의 자막입니다. 이 자막을 읽기 쉽게 정리해주세요.
 
@@ -201,6 +214,9 @@ def format_subtitle():
         formatted_text = response.choices[0].message.content.strip()
         
         print(f"✅ Formatted subtitle ({len(raw_text)} -> {len(formatted_text)} chars)")
+        
+        # Cache the result
+        cache_manager.set_cache(cache_key, formatted_text)
         
         return jsonify({
             'success': True,
@@ -361,6 +377,20 @@ def generate_questions():
     if len(text) > max_chars:
         text = text[:max_chars] + "..."
     
+    # Check cache first
+    cache_key = cache_manager.generate_cache_key('questions', text[:500], question_type, count)
+    cached_result = cache_manager.get_cached(cache_key)
+    
+    if cached_result:
+        print(f"📦 Returning cached questions")
+        return jsonify({
+            'success': True,
+            'questions': cached_result['questions'],
+            'type': cached_result['type'],
+            'count': cached_result['count'],
+            'cached': True
+        })
+    
     try:
         print(f"\n=== Generating {count} {question_type} questions ===")
         print(f"Text length: {len(text)} chars")
@@ -396,6 +426,13 @@ def generate_questions():
             questions = json.loads(result_text)
         
         print(f"✅ Generated {len(questions)} questions")
+        
+        # Cache the result
+        cache_manager.set_cache(cache_key, {
+            'questions': questions,
+            'type': question_type,
+            'count': len(questions)
+        })
         
         return jsonify({
             'success': True,
@@ -452,7 +489,7 @@ def check_pdf_service():
 
 @app.route('/api/pdf/extract', methods=['POST'])
 def extract_pdf():
-    """Extract text from PDF using Gemini API."""
+    """Extract text from PDF, PPTX, or DOCX files."""
     if not GEMINI_API_KEY or GEMINI_API_KEY == 'your_gemini_api_key_here':
         return jsonify({
             'success': False,
@@ -474,29 +511,46 @@ def extract_pdf():
             'error': 'No file selected'
         }), 400
     
-    if not file.filename.lower().endswith('.pdf'):
+    filename_lower = file.filename.lower()
+    
+    # Check file extension
+    if not (filename_lower.endswith('.pdf') or 
+            filename_lower.endswith('.pptx') or 
+            filename_lower.endswith('.docx')):
         return jsonify({
             'success': False,
-            'error': 'Only PDF files are supported'
+            'error': 'Supported formats: PDF, PPTX, DOCX'
         }), 400
     
     try:
-        from pdf_processor import process_pdf
+        file_bytes = file.read()
+        print(f"📄 Processing file: {file.filename} ({len(file_bytes)} bytes)")
         
-        # Read PDF bytes
-        pdf_bytes = file.read()
-        
-        print(f"📄 Processing PDF: {file.filename} ({len(pdf_bytes)} bytes)")
-        
-        # Process PDF with Gemini
-        result = process_pdf(pdf_bytes, GEMINI_API_KEY)
+        # Route to appropriate processor based on file type
+        if filename_lower.endswith('.pdf'):
+            from pdf_processor import process_pdf
+            result = process_pdf(file_bytes, GEMINI_API_KEY)
+            count_key = 'page_count'
+            count_name = 'pageCount'
+            
+        elif filename_lower.endswith('.pptx'):
+            from pdf_processor import process_pptx
+            result = process_pptx(file_bytes, GEMINI_API_KEY)
+            count_key = 'slide_count'
+            count_name = 'slideCount'
+            
+        elif filename_lower.endswith('.docx'):
+            from pdf_processor import extract_docx_text
+            result = extract_docx_text(file_bytes)
+            count_key = 'paragraph_count'
+            count_name = 'paragraphCount'
         
         if result['success']:
-            print(f"✅ PDF processed successfully ({result.get('page_count', 0)} pages)")
+            print(f"✅ File processed successfully ({result.get(count_key, 0)} {count_key})")
             return jsonify({
                 'success': True,
                 'text': result['text'],
-                'pageCount': result.get('page_count', 0)
+                count_name: result.get(count_key, 0)
             })
         else:
             print(f"❌ PDF processing failed: {result.get('error')}")

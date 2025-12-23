@@ -13,6 +13,7 @@ import {
     reauthenticateWithCredential,
     EmailAuthProvider
 } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -34,10 +35,12 @@ const isFirebaseConfigured = () => {
 // Initialize Firebase
 let app = null;
 let auth = null;
+let db = null;
 
 if (isFirebaseConfigured()) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+    db = getFirestore(app);
 }
 
 // Auth providers
@@ -115,5 +118,5 @@ export const logOut = async () => {
     return signOut(auth);
 };
 
-export { auth, isFirebaseConfigured };
+export { auth, db, isFirebaseConfigured };
 

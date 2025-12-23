@@ -13,6 +13,7 @@ import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ChangePasswordModal from './components/ChangePasswordModal';
+import SavedTextsModal from './components/SavedTextsModal';
 import './App.css';
 
 // Mock data for demonstration
@@ -114,6 +115,9 @@ function AppContent() {
   // Password change modal state
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
+  // Saved texts modal state
+  const [isSavedTextsModalOpen, setIsSavedTextsModalOpen] = useState(false);
+
   // Mode selection from home page
   const handleSelectMode = (mode) => {
     setCurrentPage(mode);
@@ -180,12 +184,36 @@ function AppContent() {
         setExtractedText(`[PDF 처리 오류]\n\n텍스트를 직접 입력해주세요.`);
         setCurrentStep(2);
       }
-    } else {
-      // For non-PDF files (DOCX), use mock for now
-      setTimeout(() => {
-        setExtractedText(MOCK_EXTRACTED_TEXT);
+    } else if (file.name.toLowerCase().endsWith('.pptx') || file.name.toLowerCase().endsWith('.docx')) {
+      // Handle PPTX and DOCX files
+      const fileType = file.name.toLowerCase().endsWith('.pptx') ? 'PPTX' : 'DOCX';
+      setPdfProcessing({ isProcessing: true, progress: `${fileType} 텍스트 추출 중...` });
+
+      try {
+        const result = await extractPDFText(file, (progress) => {
+          setPdfProcessing({ isProcessing: true, progress: progress.message });
+        });
+
+        if (result.success) {
+          setExtractedText(result.text);
+          setPdfProcessing({ isProcessing: false, progress: '' });
+          setCurrentStep(2);
+        } else {
+          console.error(`${fileType} extraction failed:`, result.error);
+          setPdfProcessing({ isProcessing: false, progress: '' });
+          setExtractedText(`[${fileType} 추출 실패: ${result.error}]\n\n텍스트를 직접 입력해주세요.`);
+          setCurrentStep(2);
+        }
+      } catch (error) {
+        console.error(`${fileType} processing error:`, error);
+        setPdfProcessing({ isProcessing: false, progress: '' });
+        setExtractedText(`[${fileType} 처리 오류]\n\n텍스트를 직접 입력해주세요.`);
         setCurrentStep(2);
-      }, 1000);
+      }
+    } else {
+      // Unsupported file type
+      setExtractedText('지원하지 않는 파일 형식입니다.');
+      setCurrentStep(2);
     }
   };
 
@@ -315,9 +343,85 @@ function AppContent() {
   };
 
   const renderContent = () => {
-    // Home page
+    // Loading auth state
+    if (loading) {
+      return (
+        <div className="auth-loading">
+          <span className="spinner"></span>
+          <p>인증 확인 중...</p>
+        </div>
+      );
+    }
+
+    // Home page (always accessible)
     if (currentPage === 'home') {
       return <HomePage onSelectMode={handleSelectMode} />;
+    }
+
+    // Auth pages (always accessible)
+    if (currentPage === 'login' || currentPage === 'signup' || currentPage === 'forgot-password') {
+      if (currentPage === 'login') {
+        return (
+          <LoginPage
+            onBack={handleGoHome}
+            onSwitchToSignup={() => setCurrentPage('signup')}
+            onSwitchToForgotPassword={() => setCurrentPage('forgot-password')}
+            onLoginSuccess={() => setCurrentPage('home')}
+          />
+        );
+      }
+      if (currentPage === 'signup') {
+        return (
+          <SignupPage
+            onBack={handleGoHome}
+            onSwitchToLogin={() => setCurrentPage('login')}
+            onSignupSuccess={() => setCurrentPage('home')}
+          />
+        );
+      }
+      if (currentPage === 'forgot-password') {
+        return (
+          <ForgotPasswordPage
+            onBack={handleGoHome}
+            onSwitchToLogin={() => setCurrentPage('login')}
+          />
+        );
+      }
+    }
+
+    // Protected routes - require authentication
+    if (!isAuthenticated) {
+      return (
+        <div className="login-required-screen animate-fade-in">
+          <div className="login-required-card">
+            <div className="login-required-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h2>로그인이 필요합니다</h2>
+            <p>이 기능을 사용하려면 먼저 로그인해주세요.</p>
+            <div className="login-required-actions">
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={() => setCurrentPage('login')}
+              >
+                로그인하기
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={handleGoHome}
+              >
+                홈으로 돌아가기
+              </button>
+            </div>
+            <p className="login-required-signup">
+              계정이 없으신가요? <button onClick={() => setCurrentPage('signup')}>회원가입</button>
+            </p>
+          </div>
+        </div>
+      );
     }
 
     // PDF Flow
@@ -395,39 +499,6 @@ function AppContent() {
       }
     }
 
-    // Login Page
-    if (currentPage === 'login') {
-      return (
-        <LoginPage
-          onBack={handleGoHome}
-          onSwitchToSignup={() => setCurrentPage('signup')}
-          onSwitchToForgotPassword={() => setCurrentPage('forgot-password')}
-          onLoginSuccess={() => setCurrentPage('home')}
-        />
-      );
-    }
-
-    // Signup Page
-    if (currentPage === 'signup') {
-      return (
-        <SignupPage
-          onBack={handleGoHome}
-          onSwitchToLogin={() => setCurrentPage('login')}
-          onSignupSuccess={() => setCurrentPage('home')}
-        />
-      );
-    }
-
-    // Forgot Password Page
-    if (currentPage === 'forgot-password') {
-      return (
-        <ForgotPasswordPage
-          onBack={handleGoHome}
-          onSwitchToLogin={() => setCurrentPage('login')}
-        />
-      );
-    }
-
     return null;
   };
 
@@ -471,9 +542,8 @@ function AppContent() {
               </button>
               <div className="header-actions">
 
-
                 {isAuthenticated ? (
-                  /* Logged in state */
+                  /* Logged in state - Order: Name | Load | Logout | Password */
                   <div className="user-profile">
                     {user?.photoURL ? (
                       <img
@@ -488,6 +558,16 @@ function AppContent() {
                     <span className="user-name">
                       {user?.displayName || user?.email?.split('@')[0]}
                     </span>
+                    <button
+                      className="header-load-btn"
+                      onClick={() => setIsSavedTextsModalOpen(true)}
+                      title="저장된 텍스트 불러오기"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
+                      <span>불러오기</span>
+                    </button>
                     <button className="logout-btn" onClick={handleLogout}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -566,6 +646,19 @@ function AppContent() {
       <ChangePasswordModal
         isOpen={isChangePasswordModalOpen}
         onClose={() => setIsChangePasswordModalOpen(false)}
+      />
+
+      {/* Saved Texts Modal */}
+      <SavedTextsModal
+        isOpen={isSavedTextsModalOpen}
+        onClose={() => setIsSavedTextsModalOpen(false)}
+        onSelectText={(savedText) => {
+          setExtractedText(savedText.content);
+          setEditedText(savedText.content);
+          setCurrentPage('pdf');
+          setCurrentStep(2);
+          setIsSavedTextsModalOpen(false);
+        }}
       />
     </div>
   );

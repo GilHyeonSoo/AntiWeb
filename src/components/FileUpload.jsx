@@ -10,15 +10,16 @@ function FileUpload({ onFileSelect, onBack, isProcessing = false, processingMess
   const allowedTypes = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   ];
 
-  const allowedExtensions = ['.pdf', '.docx'];
+  const allowedExtensions = ['.pdf', '.docx', '.pptx'];
 
   const validateFile = (file) => {
     const extension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
 
     if (!allowedExtensions.includes(extension) && !allowedTypes.includes(file.type)) {
-      setError('PDF 또는 DOCX 파일만 업로드할 수 있습니다.');
+      setError('PDF, DOCX, 또는 PPTX 파일만 업로드할 수 있습니다.');
       return false;
     }
 
@@ -142,7 +143,7 @@ function FileUpload({ onFileSelect, onBack, isProcessing = false, processingMess
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.docx"
+          accept=".pdf,.docx,.pptx"
           onChange={handleInputChange}
           className="file-input"
         />
@@ -151,7 +152,7 @@ function FileUpload({ onFileSelect, onBack, isProcessing = false, processingMess
           <div className="processing-overlay">
             <div className="processing-spinner"></div>
             <div className="processing-text">
-              <span className="processing-title">PDF 텍스트 추출 중...</span>
+              <span className="processing-title">텍스트 추출 중...</span>
               <span className="processing-message">{processingMessage || 'Gemini AI가 분석 중입니다'}</span>
             </div>
           </div>

@@ -326,6 +326,43 @@
     height: 1rem;
 }
 
+/* Header Load Button */
+.header-load-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-left: 12px;
+}
+
+.header-load-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.header-load-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+@media (max-width: 768px) {
+    .header-load-btn span {
+        display: none;
+    }
+
+    .header-load-btn {
+        padding: var(--spacing-xs);
+    }
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
     .auth-card {
