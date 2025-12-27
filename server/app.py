@@ -546,11 +546,55 @@ def extract_pdf():
             count_name = 'paragraphCount'
         
         if result['success']:
-            print(f"✅ File processed successfully ({result.get(count_key, 0)} {count_key})")
+            raw_text = result['text']
+            print(f"✅ File extracted ({result.get(count_key, 0)} {count_key})")
+            
+            # Step 2: Organize with DeepSeek AI
+            if deepseek_client and len(raw_text) > 100:
+                print(f"🧠 Organizing with DeepSeek AI...")
+                try:
+                    organize_prompt = """다음은 문서에서 OCR로 추출된 텍스트입니다. 학습에 적합한 형태로 정리해주세요.
+
+규칙:
+1. 제목과 소제목은 ## 마크다운 형식으로 표시
+2. **핵심 개념, 정의, 공식은 굵은 글씨**로 강조
+3. 수학 수식은 LaTeX 형식($...$)으로 유지
+4. 불필요한 공백, 반복, 페이지 번호 등 제거
+5. 논리적인 순서로 재구성
+6. 원본의 중요한 내용은 모두 포함 (요약이 아닌 정리)
+7. 중요한 문장이나 개념은 반드시 **굵은 글씨**로 강조
+
+추출된 텍스트:
+"""
+                    response = deepseek_client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": "당신은 학습 자료를 정리하는 전문가입니다. 주어진 텍스트를 깔끔하게 정리하고 중요한 부분을 강조해주세요."},
+                            {"role": "user", "content": organize_prompt + raw_text[:20000]}
+                        ],
+                        max_tokens=8000,
+                        temperature=0.3
+                    )
+                    
+                    organized_text = response.choices[0].message.content
+                    print(f"✅ Organized: {len(raw_text)} → {len(organized_text)} chars")
+                    
+                    return jsonify({
+                        'success': True,
+                        'text': organized_text,
+                        count_name: result.get(count_key, 0),
+                        'organized': True
+                    })
+                    
+                except Exception as e:
+                    print(f"⚠️ DeepSeek organization failed: {e}, returning raw text")
+            
+            # Fallback: Return raw OCR text
             return jsonify({
                 'success': True,
-                'text': result['text'],
-                count_name: result.get(count_key, 0)
+                'text': raw_text,
+                count_name: result.get(count_key, 0),
+                'organized': False
             })
         else:
             print(f"❌ PDF processing failed: {result.get('error')}")

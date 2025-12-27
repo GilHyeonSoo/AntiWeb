@@ -3,6 +3,11 @@
     margin: 0 auto;
 }
 
+/* Back Button Row */
+.qd-back-row {
+    margin-bottom: var(--spacing-md);
+}
+
 /* Header - slightly larger */
 .result-header {
     display: flex;

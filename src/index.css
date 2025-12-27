@@ -302,6 +302,18 @@ textarea.input {
   color: var(--color-success);
 }
 
+.progress-step.clickable {
+  cursor: pointer;
+}
+
+.progress-step.clickable:hover {
+  opacity: 0.8;
+}
+
+.progress-step.clickable:hover .step-number {
+  transform: scale(1.1);
+}
+
 .step-number {
   display: flex;
   align-items: center;
@@ -385,7 +397,7 @@ textarea.input {
 /* Utilities */
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 2200px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
 }

@@ -140,15 +140,6 @@ function QuestionTypeSelector({ onSelect, onBack, isLoading, textLength = 1000 }
 
     return (
         <div className="question-type-container animate-fade-in">
-            <div className="type-header">
-                <button className="btn btn-secondary back-btn" onClick={onBack}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="15,18 9,12 15,6" />
-                    </svg>
-                    뒤로
-                </button>
-            </div>
-
             {/* Question Type Selection */}
             <div className="section-label">문제 유형</div>
             <div className="type-cards compact">

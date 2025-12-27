@@ -6,7 +6,7 @@ import { extractPDFText, checkPDFService } from './services/pdfApi';
 import HomePage from './components/HomePage';
 import FileUpload from './components/FileUpload';
 import YoutubeInput from './components/YoutubeInput';
-import TextEditor from './components/TextEditor';
+import SummaryView from './components/SummaryView';
 import QuestionTypeSelector from './components/QuestionTypeSelector';
 import QuestionDisplay from './components/QuestionDisplay';
 import LoginPage from './components/LoginPage';
@@ -305,6 +305,14 @@ function AppContent() {
     }
   };
 
+  // Handle step click navigation
+  const handleStepClick = (step) => {
+    // Only allow going back to completed steps
+    if (step < currentStep) {
+      setCurrentStep(step);
+    }
+  };
+
   // Get user initials for avatar placeholder
   const getUserInitials = () => {
     if (user?.displayName) {
@@ -326,7 +334,7 @@ function AppContent() {
     if (currentPage === 'pdf') {
       return [
         { label: '파일 업로드', step: 1 },
-        { label: '텍스트 편집', step: 2 },
+        { label: 'AI 정리본', step: 2 },
         { label: '유형 선택', step: 3 },
         { label: '문제 확인', step: 4 }
       ];
@@ -334,7 +342,7 @@ function AppContent() {
     if (currentPage === 'youtube') {
       return [
         { label: '링크 입력', step: 1 },
-        { label: '텍스트 편집', step: 2 },
+        { label: 'AI 정리본', step: 2 },
         { label: '유형 선택', step: 3 },
         { label: '문제 확인', step: 4 }
       ];
@@ -426,22 +434,19 @@ function AppContent() {
 
     // PDF Flow
     if (currentPage === 'pdf') {
-      if (currentStep === 1) {
+      // Step 1 is now part of SummaryView (no separate FileUpload page)
+      if (currentStep === 1 || currentStep === 2) {
         return (
-          <FileUpload
-            onFileSelect={handleFileSelect}
+          <SummaryView
+            extractedText={extractedText}
             onBack={handleGoHome}
+            onNext={handleTextNext}
+            onFileSelect={handleFileSelect}
             isProcessing={pdfProcessing.isProcessing}
             processingMessage={pdfProcessing.progress}
-          />
-        );
-      }
-      if (currentStep === 2) {
-        return (
-          <TextEditor
-            extractedText={extractedText}
-            onBack={handleBackToInput}
-            onNext={handleTextNext}
+            progressSteps={progressSteps}
+            currentStep={currentStep}
+            onStepClick={handleStepClick}
           />
         );
       }
@@ -472,7 +477,7 @@ function AppContent() {
       }
       if (currentStep === 2) {
         return (
-          <TextEditor
+          <SummaryView
             extractedText={extractedText}
             onBack={handleBackToInput}
             onNext={handleTextNext}
@@ -605,29 +610,6 @@ function AppContent() {
 
         <main className="app-main">
           <div className="container">
-            {/* Progress Steps - only show when not on home */}
-            {currentPage !== 'home' && progressSteps.length > 0 && (
-              <div className="progress-steps">
-                {progressSteps.map((item, index) => (
-                  <div key={item.step} className="progress-step-wrapper">
-                    <div className={`progress-step ${currentStep >= item.step ? 'active' : ''} ${currentStep > item.step ? 'completed' : ''}`}>
-                      <span className="step-number">
-                        {currentStep > item.step ? (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" width="14" height="14">
-                            <polyline points="20,6 9,17 4,12" />
-                          </svg>
-                        ) : item.step}
-                      </span>
-                      <span className="step-label">{item.label}</span>
-                    </div>
-                    {index < progressSteps.length - 1 && (
-                      <div className={`step-connector ${currentStep > item.step ? 'active' : ''}`} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* Content */}
             <div className="content-area">
               {renderContent()}

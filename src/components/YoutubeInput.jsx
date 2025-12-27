@@ -182,12 +182,6 @@ GPT와 같은 대규모 언어 모델은 수백억 개의 문장을 학습하여
     return (
         <div className="youtube-input-container animate-fade-in">
             <div className="youtube-header">
-                <button className="btn btn-secondary back-btn" onClick={onBack}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="15,18 9,12 15,6" />
-                    </svg>
-                    뒤로
-                </button>
                 <div className="youtube-title">
                     <div className="youtube-icon-wrapper">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

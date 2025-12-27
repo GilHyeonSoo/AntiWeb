@@ -98,10 +98,10 @@ def extract_text_with_gemini(image: Image.Image, api_key: str) -> dict:
     genai.configure(api_key=api_key)
     
     # Use Gemini 1.5 Flash model
-    model = genai.GenerativeModel('gemini-2.0-flash-001')
+    model = genai.GenerativeModel('gemini-2.0-flash-lite')
     
     # Prepare the prompt
-    prompt = """이 이미지의 내용을 다음 규칙에 따라 추출해주세요:
+    prompt = """이 이미지의 내용을 다음 규칙에 따라 추출하고 정리해주세요:
 
 1. 모든 텍스트를 정확하게 추출합니다.
 2. 수학 수식은 LaTeX 문법으로 변환합니다:
@@ -110,11 +110,14 @@ def extract_text_with_gemini(image: Image.Image, api_key: str) -> dict:
 3. 문제 번호, 지문, 보기를 구분하여 마크다운 형식으로 정리합니다.
 4. 표가 있으면 마크다운 테이블로 변환합니다.
 5. 그림/도형이 있으면 [그림: 설명] 형태로 표시합니다.
+6. **중요한 개념, 정의, 공식, 핵심 문장은 반드시 **굵은 글씨**로 강조합니다.**
+7. 특히 중요한 내용은 ==하이라이트== 형식으로 표시합니다.
 
 출력 형식:
 - 마크다운 형식으로 깔끔하게 정리
 - 원본의 구조와 순서를 유지
-- 수식은 반드시 LaTeX 형식 사용"""
+- 수식은 반드시 LaTeX 형식 사용
+- 핵심 내용은 굵은 글씨로 강조"""
 
     # Generate content
     response = model.generate_content([prompt, image])
@@ -127,59 +130,96 @@ def extract_text_with_gemini(image: Image.Image, api_key: str) -> dict:
 
 def process_pdf(pdf_bytes: bytes, api_key: str) -> dict:
     """
-    Process an entire PDF file and extract text from all pages.
+    Process a PDF file by uploading directly to Gemini API.
+    No image conversion - much faster!
     
     Args:
         pdf_bytes: The PDF file as bytes
         api_key: Gemini API key
     
     Returns:
-        Dictionary with all extracted text and metadata
+        Dictionary with extracted text and metadata
     """
-    # Check dependencies
-    issues = check_dependencies()
-    if issues:
+    if not GEMINI_AVAILABLE:
         return {
             'success': False,
-            'error': 'Missing dependencies: ' + ', '.join(issues),
+            'error': 'google-generativeai is not installed',
             'text': ''
         }
     
     try:
-        # Convert PDF to images
-        images = pdf_to_images(pdf_bytes)
+        import tempfile
+        import os
         
-        if not images:
-            return {
-                'success': False,
-                'error': 'PDF에서 페이지를 추출할 수 없습니다.',
-                'text': ''
-            }
+        # Configure Gemini
+        genai.configure(api_key=api_key)
         
-        # Process each page
-        all_text = []
-        for i, image in enumerate(images):
-            page_num = i + 1
+        # Save PDF to temporary file (required for upload)
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+            temp_file.write(pdf_bytes)
+            temp_path = temp_file.name
+        
+        try:
+            # Upload PDF directly to Gemini
+            print("📤 Uploading PDF to Gemini...")
+            uploaded_file = genai.upload_file(temp_path, mime_type="application/pdf")
+            print(f"✅ Uploaded: {uploaded_file.name}")
             
+            # Use Gemini 2.0 Flash model
+            model = genai.GenerativeModel('gemini-2.0-flash-lite')
+            
+            # Prepare the prompt
+            prompt = """이 PDF 문서의 모든 내용을 다음 규칙에 따라 추출하고 정리해주세요:
+
+1. 모든 텍스트를 정확하게 추출합니다.
+2. 수학 수식은 LaTeX 문법으로 변환합니다:
+   - 인라인 수식: $수식$
+   - 블록 수식: $$수식$$
+3. 제목과 소제목은 ## 마크다운 형식으로 표시합니다.
+4. **핵심 개념, 정의, 공식은 굵은 글씨**로 강조합니다.
+5. 표는 사용하지 마세요! 대신 다음 형식으로 정리하세요:
+   **장점:**
+   - 내용1
+   - 내용2
+   
+   **단점:**
+   - 내용1
+   - 내용2
+6. 그림/도형이 있으면 [그림: 설명] 형태로 표시합니다.
+7. 불필요한 페이지 번호, 머리글/바닥글 등은 제거합니다.
+8. 논리적인 순서로 내용을 정리합니다.
+
+출력 형식:
+- 마크다운 형식으로 깔끔하게 정리
+- 원본의 구조와 순서를 유지
+- 중요한 내용은 반드시 굵은 글씨로 강조
+- 표 대신 불릿 포인트 사용"""
+
+            # Generate content with PDF
+            print("🧠 Processing PDF with Gemini...")
+            response = model.generate_content([prompt, uploaded_file])
+            
+            # Delete the uploaded file from Gemini
             try:
-                result = extract_text_with_gemini(image, api_key)
-                if result['success']:
-                    all_text.append(f"## 페이지 {page_num}\n\n{result['text']}")
-                else:
-                    all_text.append(f"## 페이지 {page_num}\n\n[오류: 텍스트 추출 실패]")
-            except Exception as e:
-                all_text.append(f"## 페이지 {page_num}\n\n[오류: {str(e)}]")
-        
-        # Combine all pages
-        combined_text = '\n\n---\n\n'.join(all_text)
-        
-        return {
-            'success': True,
-            'text': combined_text,
-            'page_count': len(images)
-        }
+                genai.delete_file(uploaded_file.name)
+            except:
+                pass
+            
+            print("✅ PDF processed successfully")
+            
+            return {
+                'success': True,
+                'text': response.text,
+                'page_count': 0  # Page count not available with direct upload
+            }
+            
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
         
     except Exception as e:
+        print(f"❌ PDF processing error: {e}")
         return {
             'success': False,
             'error': str(e),
